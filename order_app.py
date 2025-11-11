@@ -18,15 +18,14 @@ st.markdown(
         padding-left: 0.5rem;
         padding-right: 0.5rem;
         font-size: 16px;
-        max-width: 600px;
+        max-width: 480px;
         margin: 0 auto;
     }
 
-    /* タイトルを文字の半分だけ下に下げる */
+    /* タイトルを文字の半分だけ下に下げる（上が切れないようにマージンで調整） */
     h1 {
-        position: relative;
-        top: 0.5em;
         text-align: center;
+        margin-top: 0.5em;  /* ここで「文字の半分」程度だけ下げる */
         margin-bottom: 0.8em;
     }
 
@@ -42,6 +41,7 @@ st.markdown(
     .flavor-label.strawberry {
         color: #E60033;
     }
+
     .count-display {
         text-align: center;
         font-size: 20px;
@@ -49,6 +49,7 @@ st.markdown(
         line-height: 2.2rem;
         white-space: nowrap;
     }
+
     .triangle-button button {
         width: 100%;
         height: 2.2rem;
@@ -56,34 +57,51 @@ st.markdown(
         padding: 0;
     }
 
-    /* スマホ表示最適化 — ボタンをもっと左に寄せて全体を1行に収める */
+    /* スマホ向け最適化
+       - ラベル幅をさらに短く
+       - 各カラムの余白を削る
+       - 左ボタン〜右ボタンが1画面に収まるよう比率を調整
+    */
     @media (max-width: 600px) {
         div[data-testid="stHorizontalBlock"] {
             display: flex;
             flex-wrap: nowrap;
             align-items: center;
-            gap: 0.1rem;
+            gap: 0.05rem;
         }
+
+        /* カラム内の余白削減 */
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+        }
+
+        /* ラベルを短めにしてボタン群を左側へ寄せる */
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1) {
-            flex: 0 0 30% !important; /* ラベル部分を少し短く */
+            flex: 0 0 26% !important;
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) {
-            flex: 0 0 18% !important; /* 左ボタン */
+            flex: 0 0 14% !important; /* 左向きボタン */
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3) {
-            flex: 0 0 12% !important; /* 数字 */
+            flex: 0 0 10% !important; /* 数字 */
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4) {
-            flex: 0 0 18% !important; /* 右ボタン */
+            flex: 0 0 14% !important; /* 右向きボタン */
         }
+
         .flavor-label {
             font-size: 16px;
         }
         .triangle-button button {
             font-size: 16px;
+            height: 2rem;
         }
         .count-display {
             font-size: 18px;
+            line-height: 2rem;
         }
     }
 
@@ -120,8 +138,8 @@ st.header("ソフテニチュロス注文")
 
 # 各フレーバー行
 for flavor in flavors:
-    # 全体をより左寄せに（スマホ画面で右ボタンまで見えるように）
-    col_label, col_left, col_num, col_right = st.columns([2.8, 1.2, 1.2, 1.2])
+    # ベースの比率（スマホではCSSで上書きされる）
+    col_label, col_left, col_num, col_right = st.columns([2.6, 1.4, 1.0, 1.4])
 
     # ラベル
     with col_label:
