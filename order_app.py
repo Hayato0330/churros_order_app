@@ -2,108 +2,79 @@
 
 import streamlit as st
 
-# ページ設定（スマートフォン利用を想定）
-st.set_page_config(
-    page_title="フレーバーセレクター",
-    layout="centered",
-)
+# ページ設定
+st.set_page_config(page_title="ソフテニチュロス注文", layout="wide")
 
-# スタイル調整
-st.markdown(
-    """
+# タイトル
+st.markdown("<h1 style='text-align:center;'>ソフテニチュロス注文</h1>", unsafe_allow_html=True)
+
+# スタイル設定（スマホ対応）
+st.markdown("""
     <style>
+    /* ページ全体を中央寄せ */
     .main {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-        font-size: 16px;
-    }
-    .flavor-label {
-        font-size: 18px;
-        font-weight: 600;
-        padding-left: 4px;
-    }
-    .flavor-label.choco {
-        color: #8B4513;
-    }
-    .flavor-label.strawberry {
-        color: #E60033;
-    }
-    .count-display {
-        text-align: center;
-        font-size: 20px;
-        font-weight: 600;
-        line-height: 2.2rem;
-    }
-    .triangle-button button {
-        width: 100%;
-        height: 2.2rem;
-        font-size: 18px;
-        padding: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }
 
-    /* スマホで列が縦積みされないように調整 */
+    /* ボタンレイアウトを画面幅に収める */
+    .button-container {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        max-width: 400px;
+        margin-bottom: 20px;
+    }
+
+    /* 各ボタンの見た目を統一 */
+    .button-container button {
+        flex: 1 1 45%;
+        height: 60px;
+        font-size: 18px;
+    }
+
+    /* 注文ボタン */
+    .order-button button {
+        width: 100%;
+        height: 60px;
+        background-color: #007BFF;
+        color: white;
+        font-size: 20px;
+        border-radius: 10px;
+    }
+
+    /* モバイル用の微調整 */
     @media (max-width: 600px) {
-        div[data-testid="stHorizontalBlock"] {
-            display: flex;
-            flex-wrap: nowrap;
-            align-items: center;
-            gap: 0.25rem;
+        .button-container button {
+            flex: 1 1 48%;
+            height: 55px;
+            font-size: 16px;
         }
-        div[data-testid="column"] {
-            flex: 0 0 auto !important;
+        .order-button button {
+            height: 55px;
+            font-size: 18px;
         }
     }
     </style>
-    """,
-    unsafe_allow_html=True,
-)
+""", unsafe_allow_html=True)
 
-flavors = ["プレーン", "チョコ", "ストロベリー"]
+# 商品ボタン群
+st.markdown('<div class="button-container">', unsafe_allow_html=True)
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("左向き"):
+        st.session_state["direction"] = "left"
+with col2:
+    if st.button("右向き"):
+        st.session_state["direction"] = "right"
+st.markdown('</div>', unsafe_allow_html=True)
 
-# カウントの初期化
-if "counts" not in st.session_state:
-    st.session_state.counts = {f: 0 for f in flavors}
-
-st.header("フレーバー選択", divider="gray")
-
-# 各フレーバー行
-for flavor in flavors:
-    col_label, col_left, col_num, col_right = st.columns([3, 1.5, 1.5, 1.5])
-
-    # ラベル
-    with col_label:
-        if flavor == "チョコ":
-            cls = "flavor-label choco"
-        elif flavor == "ストロベリー":
-            cls = "flavor-label strawberry"
-        else:
-            cls = "flavor-label"
-        st.markdown(f"<div class='{cls}'>{flavor}</div>", unsafe_allow_html=True)
-
-    # 左向きボタン（◀）
-    with col_left:
-        st.markdown("<div class='triangle-button'>", unsafe_allow_html=True)
-        left_clicked = st.button("◀", key=f"{flavor}_left")
-        if left_clicked and st.session_state.counts[flavor] > 0:
-            st.session_state.counts[flavor] -= 1
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    # 数字表示
-    with col_num:
-        st.markdown(
-            f"<div class='count-display'>{st.session_state.counts[flavor]}</div>",
-            unsafe_allow_html=True,
-        )
-
-    # 右向きボタン（▶）
-    with col_right:
-        st.markdown("<div class='triangle-button'>", unsafe_allow_html=True)
-        right_clicked = st.button("▶", key=f"{flavor}_right")
-        if right_clicked:
-            st.session_state.counts[flavor] += 1
-        st.markdown("</div>", unsafe_allow_html=True)
-
-st.markdown("---")
-
-# 注文ボタン（機能はこれから実装）
-order = st.button("注文する")
+# 注文ボタン（青色で横長）
+st.markdown('<div class="order-button">', unsafe_allow_html=True)
+if st.button("注文"):
+    st.success("注文が送信されました！")
+st.markdown('</div>', unsafe_allow_html=True)
