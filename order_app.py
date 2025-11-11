@@ -2,16 +2,16 @@
 
 import streamlit as st
 
-# ページ設定（スマートフォン利用を想定したシンプルなUI）
+# ページ設定（スマートフォン利用を想定）
 st.set_page_config(
     page_title="フレーバーセレクター",
     layout="centered",
 )
 
+# スタイル調整
 st.markdown(
     """
     <style>
-    /* 全体の余白とフォントをスマホ向けに調整 */
     .main {
         padding-top: 1rem;
         padding-bottom: 1rem;
@@ -21,6 +21,12 @@ st.markdown(
         font-size: 18px;
         font-weight: 600;
         padding-left: 4px;
+    }
+    .flavor-label.choco {
+        color: #8B4513;
+    }
+    .flavor-label.strawberry {
+        color: #E60033;
     }
     .count-display {
         text-align: center;
@@ -34,6 +40,19 @@ st.markdown(
         font-size: 18px;
         padding: 0;
     }
+
+    /* スマホで列が縦積みされないように調整 */
+    @media (max-width: 600px) {
+        div[data-testid="stHorizontalBlock"] {
+            display: flex;
+            flex-wrap: nowrap;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        div[data-testid="column"] {
+            flex: 0 0 auto !important;
+        }
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -41,26 +60,32 @@ st.markdown(
 
 flavors = ["プレーン", "チョコ", "ストロベリー"]
 
-# カウントの初期化（すべて0）
+# カウントの初期化
 if "counts" not in st.session_state:
     st.session_state.counts = {f: 0 for f in flavors}
 
 st.header("フレーバー選択", divider="gray")
 
-# 各フレーバーの行を表示
+# 各フレーバー行
 for flavor in flavors:
     col_label, col_left, col_num, col_right = st.columns([3, 1.5, 1.5, 1.5])
 
+    # ラベル
     with col_label:
-        st.markdown(f"<div class='flavor-label'>{flavor}</div>", unsafe_allow_html=True)
+        if flavor == "チョコ":
+            cls = "flavor-label choco"
+        elif flavor == "ストロベリー":
+            cls = "flavor-label strawberry"
+        else:
+            cls = "flavor-label"
+        st.markdown(f"<div class='{cls}'>{flavor}</div>", unsafe_allow_html=True)
 
     # 左向きボタン（◀）
     with col_left:
         st.markdown("<div class='triangle-button'>", unsafe_allow_html=True)
-        if st.button("◀", key=f"{flavor}_left"):
-            # 0未満にならないように制御
-            if st.session_state.counts[flavor] > 0:
-                st.session_state.counts[flavor] -= 1
+        left_clicked = st.button("◀", key=f"{flavor}_left")
+        if left_clicked and st.session_state.counts[flavor] > 0:
+            st.session_state.counts[flavor] -= 1
         st.markdown("</div>", unsafe_allow_html=True)
 
     # 数字表示
@@ -73,6 +98,12 @@ for flavor in flavors:
     # 右向きボタン（▶）
     with col_right:
         st.markdown("<div class='triangle-button'>", unsafe_allow_html=True)
-        if st.button("▶", key=f"{flavor}_right"):
+        right_clicked = st.button("▶", key=f"{flavor}_right")
+        if right_clicked:
             st.session_state.counts[flavor] += 1
         st.markdown("</div>", unsafe_allow_html=True)
+
+st.markdown("---")
+
+# 注文ボタン（機能はこれから実装）
+order = st.button("注文する")
