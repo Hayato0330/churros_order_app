@@ -1,37 +1,31 @@
 # app1
 import streamlit as st
 
-# ページ設定（スマートフォン利用を想定）
-st.set_page_config(
-    page_title="ソフテニチュロス注文",
-    layout="wide",
-)
+# ページ設定
+st.set_page_config(page_title="ソフテニチュロス注文", layout="wide")
 
-# スタイル調整
+# CSSでタイトル位置とカラム間隔を強制調整
 st.markdown(
     """
     <style>
+    /* ページ全体の調整 */
     .block-container {
-        padding-top: 0.75rem;
+        padding-top: 1.5rem !important;  /* タイトルが切れないように余白を多めに */
         padding-bottom: 1rem;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
         font-size: 16px;
         max-width: 480px;
         margin: 0 auto;
     }
 
-    /* タイトルを文字の半分だけ下に下げる（上が切れないようにマージンで調整） */
+    /* タイトルを文字の半分だけ下げる */
     h1 {
+        margin-top: 1.2em !important; /* 上半分が見切れないように調整 */
         text-align: center;
-        margin-top: 0.5em;  /* ここで「文字の半分」程度だけ下げる */
-        margin-bottom: 0.8em;
     }
 
     .flavor-label {
         font-size: 18px;
         font-weight: 600;
-        padding-left: 4px;
         white-space: nowrap;
     }
     .flavor-label.choco {
@@ -56,52 +50,37 @@ st.markdown(
         padding: 0;
     }
 
-    /* スマホ向け最適化
-       - ラベル幅をさらに短く
-       - 各カラムの余白を削る
-       - 左ボタン〜右ボタンが1画面に収まるよう比率を調整
-    */
+    /* スマホ最適化 */
     @media (max-width: 600px) {
+        /* カラム幅を極限まで詰めて1行に */
         div[data-testid="stHorizontalBlock"] {
-            display: flex;
-            flex-wrap: nowrap;
-            align-items: center;
-            gap: 0.05rem;
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            justify-content: flex-start !important;
+            gap: 0.05rem !important;
         }
 
-        /* カラム内の余白削減 */
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-        }
-
-        /* ラベルを短めにしてボタン群を左側へ寄せる */
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1) {
-            flex: 0 0 26% !important;
+            flex: 0 0 22% !important; /* ラベル短め */
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) {
-            flex: 0 0 14% !important; /* 左向きボタン */
+            flex: 0 0 16% !important; /* 左ボタン */
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3) {
-            flex: 0 0 10% !important; /* 数字 */
+            flex: 0 0 12% !important; /* 数字 */
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4) {
-            flex: 0 0 14% !important; /* 右向きボタン */
+            flex: 0 0 16% !important; /* 右ボタン */
         }
 
-        .flavor-label {
-            font-size: 16px;
+        /* 余白を消して中央寄せ */
+        div[data-testid="column"] {
+            padding: 0 !important;
+            margin: 0 !important;
         }
-        .triangle-button button {
-            font-size: 16px;
-            height: 2rem;
-        }
-        .count-display {
-            font-size: 18px;
-            line-height: 2rem;
-        }
+        .flavor-label { font-size: 16px; }
+        .triangle-button button { font-size: 16px; height: 2rem; }
+        .count-display { font-size: 18px; line-height: 2rem; }
     }
 
     /* 注文ボタン */
@@ -129,51 +108,39 @@ st.markdown(
 
 flavors = ["プレーン", "チョコ", "ストロベリー"]
 
-# カウントの初期化
 if "counts" not in st.session_state:
     st.session_state.counts = {f: 0 for f in flavors}
 
 st.header("ソフテニチュロス注文")
 
-# 各フレーバー行
 for flavor in flavors:
-    # ベースの比率（スマホではCSSで上書きされる）
-    col_label, col_left, col_num, col_right = st.columns([2.6, 1.4, 1.0, 1.4])
-
-    # ラベル
+    col_label, col_left, col_num, col_right = st.columns([2.2, 1.2, 1.0, 1.2])
     with col_label:
+        cls = "flavor-label"
         if flavor == "チョコ":
-            cls = "flavor-label choco"
+            cls += " choco"
         elif flavor == "ストロベリー":
-            cls = "flavor-label strawberry"
-        else:
-            cls = "flavor-label"
+            cls += " strawberry"
         st.markdown(f"<div class='{cls}'>{flavor}</div>", unsafe_allow_html=True)
 
-    # 左向きボタン（◀）
     with col_left:
         st.markdown("<div class='triangle-button'>", unsafe_allow_html=True)
-        left_clicked = st.button("◀", key=f"{flavor}_left")
-        if left_clicked and st.session_state.counts[flavor] > 0:
+        if st.button("◀", key=f"{flavor}_left") and st.session_state.counts[flavor] > 0:
             st.session_state.counts[flavor] -= 1
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # 数字表示
     with col_num:
         st.markdown(
             f"<div class='count-display'>{st.session_state.counts[flavor]}</div>",
             unsafe_allow_html=True,
         )
 
-    # 右向きボタン（▶）
     with col_right:
         st.markdown("<div class='triangle-button'>", unsafe_allow_html=True)
-        right_clicked = st.button("▶", key=f"{flavor}_right")
-        if right_clicked:
+        if st.button("▶", key=f"{flavor}_right"):
             st.session_state.counts[flavor] += 1
         st.markdown("</div>", unsafe_allow_html=True)
 
-# 注文ボタン（見た目のみ）
 st.markdown(
     """
     <div class="order-button-wrap">
