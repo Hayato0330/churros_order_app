@@ -2,37 +2,35 @@
 
 import streamlit as st
 
-# ページ設定（スマートフォン利用を想定）
+# ページ設定
 st.set_page_config(
     page_title="ソフテニチュロス注文",
     layout="wide",
 )
 
-# スタイル調整
 st.markdown(
     """
     <style>
     .block-container {
-        padding-top: 1.5rem !important;  /* タイトルが切れないよう十分な余白 */
+        padding-top: 2.5rem !important;  /* タイトル上部が切れないよう多めに確保 */
         padding-bottom: 1rem;
         font-size: 16px;
-        max-width: 480px;
+        width: 100%;
+        max-width: 500px;
         margin: 0 auto;
     }
 
-    /* タイトル：文字の半分くらい下げるイメージで余白調整 */
+    /* タイトル：自然な位置で下げる（切れない＆下がりすぎない） */
     h1 {
-        margin-top: 1.0em !important;
-        margin-bottom: 0.8em;
         text-align: center;
+        margin-top: 0;        /* paddingで調整しているのでここは0 */
+        margin-bottom: 1rem;
     }
 
     .flavor-label {
         font-size: 18px;
         font-weight: 600;
         white-space: nowrap;
-        margin-right: 4px;
-        padding-left: 0;  /* 余白削除 */
     }
     .flavor-label.choco {
         color: #8B4513;
@@ -43,66 +41,30 @@ st.markdown(
 
     .count-display {
         text-align: center;
-        font-size: 20px;
+        font-size: 18px;
         font-weight: 600;
-        line-height: 2.0rem;
+        line-height: 2rem;
         white-space: nowrap;
     }
 
     .triangle-button button {
         width: 100%;
-        height: 2.0rem;
-        font-size: 18px;
+        min-width: 0;
+        height: 2rem;
+        font-size: 16px;
         padding: 0;
     }
 
-    /* --- スマホ向けレイアウト最適化 --- */
+    /* スマホ向け：無駄な余白を削って必ず1行に収める */
     @media (max-width: 600px) {
-
-        /* 行全体をフレックスに、隙間をほぼゼロに */
         div[data-testid="stHorizontalBlock"] {
-            display: flex !important;
-            flex-wrap: nowrap !important;
-            align-items: center !important;
-            justify-content: flex-start !important;
-            gap: 0 !important;
+            gap: 0.1rem !important;
         }
-
-        /* 全カラムの左右余白を削る */
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+        div[data-testid="column"] {
             padding-left: 0 !important;
             padding-right: 0 !important;
             margin-left: 0 !important;
             margin-right: 0 !important;
-        }
-
-        /* ラベル列は「内容に合わせる」＝無駄な空白を作らない */
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1) {
-            flex: 0 0 auto !important;
-            max-width: 35% !important;  /* 長くてもここまで */
-        }
-
-        /* 左ボタン、数字、右ボタンは固定幅で詰める */
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) {
-            flex: 0 0 18% !important;
-        }
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3) {
-            flex: 0 0 14% !important;
-        }
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4) {
-            flex: 0 0 18% !important;
-        }
-
-        .flavor-label {
-            font-size: 16px;
-        }
-        .triangle-button button {
-            font-size: 16px;
-            height: 1.9rem;
-        }
-        .count-display {
-            font-size: 18px;
-            line-height: 1.9rem;
         }
     }
 
@@ -137,10 +99,9 @@ if "counts" not in st.session_state:
 
 st.header("ソフテニチュロス注文")
 
-# 各フレーバー行
 for flavor in flavors:
-    # 基本比率（スマホではCSSで上書き）
-    col_label, col_left, col_num, col_right = st.columns([2, 1, 1, 1])
+    # ラベル列を小さく、ボタン群を詰める比率（スマホでも1行に入るよう調整）
+    col_label, col_left, col_num, col_right = st.columns([1.2, 0.6, 0.4, 0.6])
 
     with col_label:
         cls = "flavor-label"
