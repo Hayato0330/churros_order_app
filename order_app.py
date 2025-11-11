@@ -22,11 +22,12 @@ st.markdown(
         margin: 0 auto;
     }
 
-    /* タイトルを半分だけ下に下げる */
+    /* タイトルを文字の半分だけ下に下げる */
     h1 {
         position: relative;
         top: 0.5em;
         text-align: center;
+        margin-bottom: 0.8em;
     }
 
     .flavor-label {
@@ -55,25 +56,25 @@ st.markdown(
         padding: 0;
     }
 
-    /* スマホで1行に収まるように調整 */
+    /* スマホ表示最適化 — ボタンをもっと左に寄せて全体を1行に収める */
     @media (max-width: 600px) {
         div[data-testid="stHorizontalBlock"] {
             display: flex;
             flex-wrap: nowrap;
             align-items: center;
-            gap: 0.15rem;
+            gap: 0.1rem;
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1) {
-            flex: 0 0 38% !important;
+            flex: 0 0 30% !important; /* ラベル部分を少し短く */
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) {
-            flex: 0 0 15% !important;
+            flex: 0 0 18% !important; /* 左ボタン */
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3) {
-            flex: 0 0 12% !important;
+            flex: 0 0 12% !important; /* 数字 */
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4) {
-            flex: 0 0 15% !important;
+            flex: 0 0 18% !important; /* 右ボタン */
         }
         .flavor-label {
             font-size: 16px;
@@ -119,8 +120,8 @@ st.header("ソフテニチュロス注文")
 
 # 各フレーバー行
 for flavor in flavors:
-    # 比率を少し左寄りにして1行に収まるよう調整
-    col_label, col_left, col_num, col_right = st.columns([3.2, 1.2, 1.2, 1.2])
+    # 全体をより左寄せに（スマホ画面で右ボタンまで見えるように）
+    col_label, col_left, col_num, col_right = st.columns([2.8, 1.2, 1.2, 1.2])
 
     # ラベル
     with col_label:
