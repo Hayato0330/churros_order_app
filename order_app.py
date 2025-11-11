@@ -12,16 +12,17 @@ st.markdown(
     """
     <style>
     .block-container {
-        padding-top: 2.2rem !important;  /* タイトル上半分が切れないように調整 */
+        padding-top: 2.2rem !important;  /* タイトル上部が切れないように */
         padding-bottom: 1rem;
         font-size: 16px;
         max-width: 500px;
         margin: 0 auto;
     }
 
+    /* タイトル位置調整（「少し下」に） */
     h1 {
         text-align: center;
-        margin: 0 0 1.0rem 0;
+        margin: 0 0 1rem 0;
     }
 
     .flavor-label {
@@ -52,41 +53,42 @@ st.markdown(
         padding: 0;
     }
 
-    /* ===== スマホ向けレイアウト強制 ===== */
+    /* ===== スマホ向け 強制1行レイアウト ===== */
     @media (max-width: 600px) {
 
-        /* 各行（columnsのラッパ）を横並びに強制 */
+        /* 各行（columnsラッパ）を必ず横並びにする */
         div[data-testid="stHorizontalBlock"] {
             display: flex !important;
+            flex-direction: row !important;
             flex-wrap: nowrap !important;
             align-items: center !important;
             justify-content: flex-start !important;
-            gap: 0.1rem !important;
+            gap: 0.15rem !important;
         }
 
-        /* カラムの余白を削る */
+        /* 各columnの余白を殺す */
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
             padding-left: 0 !important;
             padding-right: 0 !important;
             margin-left: 0 !important;
             margin-right: 0 !important;
+            flex: 0 0 auto !important;
         }
 
-        /* ラベルは内容ぶんだけ。取りすぎない */
+        /* ラベル列：必要な分だけ（広く取りすぎない） */
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1) {
-            flex: 0 0 auto !important;
             max-width: 40% !important;
         }
 
-        /* 左ボタン・数字・右ボタンを横に詰める */
+        /* 左ボタン・数字・右ボタンを詰めて横に並べる */
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) {
-            flex: 0 0 14% !important;
+            width: 16% !important;
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3) {
-            flex: 0 0 10% !important;
+            width: 12% !important;
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4) {
-            flex: 0 0 14% !important;
+            width: 16% !important;
         }
     }
 
@@ -121,9 +123,9 @@ if "counts" not in st.session_state:
 
 st.header("ソフテニチュロス注文")
 
-# 1行 = テキスト + ◀ + 数字 + ▶
+# 各行：テキスト / ◀ / 数字 / ▶ を1行構成にする
 for flavor in flavors:
-    # PC向けの比率（スマホではCSSで上書きされる）
+    # PC向け比率（スマホではCSSが上書き）
     col_label, col_left, col_num, col_right = st.columns([2.5, 0.8, 0.6, 0.8])
 
     with col_label:
