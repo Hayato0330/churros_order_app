@@ -12,14 +12,13 @@ st.markdown(
     """
     <style>
     .block-container {
-        padding-top: 2.2rem !important;  /* タイトル上部が切れないように */
+        padding-top: 2.2rem !important;
         padding-bottom: 1rem;
         font-size: 16px;
         max-width: 500px;
         margin: 0 auto;
     }
 
-    /* タイトル位置調整（「少し下」に） */
     h1 {
         text-align: center;
         margin: 0 0 1rem 0;
@@ -29,13 +28,11 @@ st.markdown(
         font-size: 18px;
         font-weight: 600;
         white-space: nowrap;
+        text-align: left;
+        margin-bottom: 0.3rem; /* ボタン行との間隔 */
     }
-    .flavor-label.choco {
-        color: #8B4513;
-    }
-    .flavor-label.strawberry {
-        color: #E60033;
-    }
+    .flavor-label.choco { color: #8B4513; }
+    .flavor-label.strawberry { color: #E60033; }
 
     .count-display {
         text-align: center;
@@ -53,46 +50,32 @@ st.markdown(
         padding: 0;
     }
 
-    /* ===== スマホ向け 強制1行レイアウト ===== */
+    /* スマホ向け1行ボタン配置（2段構成：上にテキスト，下に◀ 0 ▶） */
     @media (max-width: 600px) {
-
-        /* 各行（columnsラッパ）を必ず横並びにする */
-        div[data-testid="stHorizontalBlock"] {
-            display: flex !important;
-            flex-direction: row !important;
-            flex-wrap: nowrap !important;
-            align-items: center !important;
-            justify-content: flex-start !important;
-            gap: 0.15rem !important;
+        .flavor-row {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-bottom: 0.8rem;
         }
 
-        /* 各columnの余白を殺す */
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-            padding-left: 0 !important;
-            padding-right: 0 !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            flex: 0 0 auto !important;
+        .button-row {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 0.2rem;
+            width: 100%;
         }
 
-        /* ラベル列：必要な分だけ（広く取りすぎない） */
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1) {
-            max-width: 40% !important;
+        .button-row > div {
+            flex: 0 0 auto;
         }
 
-        /* 左ボタン・数字・右ボタンを詰めて横に並べる */
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) {
-            width: 16% !important;
-        }
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3) {
-            width: 12% !important;
-        }
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4) {
-            width: 16% !important;
-        }
+        .button-row .triangle-button { width: 16%; }
+        .button-row .count-display { width: 12%; text-align: center; }
     }
 
-    /* 注文ボタン */
     .order-button-wrap {
         margin-top: 1.5rem;
     }
@@ -107,9 +90,7 @@ st.markdown(
         border-radius: 8px;
         cursor: pointer;
     }
-    .order-button:active {
-        transform: scale(0.98);
-    }
+    .order-button:active { transform: scale(0.98); }
     </style>
     """,
     unsafe_allow_html=True,
@@ -123,38 +104,36 @@ if "counts" not in st.session_state:
 
 st.header("ソフテニチュロス注文")
 
-# 各行：テキスト / ◀ / 数字 / ▶ を1行構成にする
 for flavor in flavors:
-    # PC向け比率（スマホではCSSが上書き）
-    col_label, col_left, col_num, col_right = st.columns([2.5, 0.8, 0.6, 0.8])
+    # 各フレーバーを「テキスト行＋ボタン行」の2段構成にする
+    st.markdown('<div class="flavor-row">', unsafe_allow_html=True)
 
-    with col_label:
-        cls = "flavor-label"
-        if flavor == "チョコ":
-            cls += " choco"
-        elif flavor == "ストロベリー":
-            cls += " strawberry"
-        st.markdown(f"<div class='{cls}'>{flavor}</div>", unsafe_allow_html=True)
+    # テキスト
+    cls = "flavor-label"
+    if flavor == "チョコ":
+        cls += " choco"
+    elif flavor == "ストロベリー":
+        cls += " strawberry"
+    st.markdown(f"<div class='{cls}'>{flavor}</div>", unsafe_allow_html=True)
 
-    with col_left:
-        st.markdown("<div class='triangle-button'>", unsafe_allow_html=True)
-        if st.button("◀", key=f"{flavor}_left") and st.session_state.counts[flavor] > 0:
-            st.session_state.counts[flavor] -= 1
-        st.markdown("</div>", unsafe_allow_html=True)
+    # ボタン行（横並び）
+    st.markdown('<div class="button-row">', unsafe_allow_html=True)
+    # 左ボタン
+    st.markdown("<div class='triangle-button'>", unsafe_allow_html=True)
+    if st.button("◀", key=f"{flavor}_left") and st.session_state.counts[flavor] > 0:
+        st.session_state.counts[flavor] -= 1
+    st.markdown("</div>", unsafe_allow_html=True)
+    # 数字
+    st.markdown(f"<div class='count-display'>{st.session_state.counts[flavor]}</div>", unsafe_allow_html=True)
+    # 右ボタン
+    st.markdown("<div class='triangle-button'>", unsafe_allow_html=True)
+    if st.button("▶", key=f"{flavor}_right"):
+        st.session_state.counts[flavor] += 1
+    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown('</div>', unsafe_allow_html=True)  # button-row閉じ
+    st.markdown('</div>', unsafe_allow_html=True)  # flavor-row閉じ
 
-    with col_num:
-        st.markdown(
-            f"<div class='count-display'>{st.session_state.counts[flavor]}</div>",
-            unsafe_allow_html=True,
-        )
-
-    with col_right:
-        st.markdown("<div class='triangle-button'>", unsafe_allow_html=True)
-        if st.button("▶", key=f"{flavor}_right"):
-            st.session_state.counts[flavor] += 1
-        st.markdown("</div>", unsafe_allow_html=True)
-
-# 注文ボタン（見た目のみ）
+# 注文ボタン
 st.markdown(
     """
     <div class="order-button-wrap">
