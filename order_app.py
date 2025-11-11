@@ -21,6 +21,14 @@ st.markdown(
         max-width: 600px;
         margin: 0 auto;
     }
+
+    /* タイトルを半分だけ下に下げる */
+    h1 {
+        position: relative;
+        top: 0.5em;
+        text-align: center;
+    }
+
     .flavor-label {
         font-size: 18px;
         font-weight: 600;
@@ -47,21 +55,25 @@ st.markdown(
         padding: 0;
     }
 
-    /* スマホで1行に収まるようにする調整 */
+    /* スマホで1行に収まるように調整 */
     @media (max-width: 600px) {
         div[data-testid="stHorizontalBlock"] {
             display: flex;
             flex-wrap: nowrap;
             align-items: center;
-            gap: 0.25rem;
+            gap: 0.15rem;
         }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1) {
-            flex: 0 0 34% !important;
+            flex: 0 0 38% !important;
         }
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2),
-        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3),
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) {
+            flex: 0 0 15% !important;
+        }
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3) {
+            flex: 0 0 12% !important;
+        }
         div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4) {
-            flex: 0 0 18% !important;
+            flex: 0 0 15% !important;
         }
         .flavor-label {
             font-size: 16px;
@@ -107,7 +119,8 @@ st.header("ソフテニチュロス注文")
 
 # 各フレーバー行
 for flavor in flavors:
-    col_label, col_left, col_num, col_right = st.columns([3, 1.5, 1.5, 1.5])
+    # 比率を少し左寄りにして1行に収まるよう調整
+    col_label, col_left, col_num, col_right = st.columns([3.2, 1.2, 1.2, 1.2])
 
     # ラベル
     with col_label:
@@ -142,7 +155,7 @@ for flavor in flavors:
             st.session_state.counts[flavor] += 1
         st.markdown("</div>", unsafe_allow_html=True)
 
-# 注文ボタン（機能は未実装，見た目のみ）
+# 注文ボタン（見た目のみ）
 st.markdown(
     """
     <div class="order-button-wrap">
