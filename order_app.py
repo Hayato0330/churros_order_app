@@ -12,19 +12,16 @@ st.markdown(
     """
     <style>
     .block-container {
-        padding-top: 2.5rem !important;  /* タイトル上部が切れないよう多めに確保 */
+        padding-top: 2.2rem !important;  /* タイトル上半分が切れないように調整 */
         padding-bottom: 1rem;
         font-size: 16px;
-        width: 100%;
         max-width: 500px;
         margin: 0 auto;
     }
 
-    /* タイトル：自然な位置で下げる（切れない＆下がりすぎない） */
     h1 {
         text-align: center;
-        margin-top: 0;        /* paddingで調整しているのでここは0 */
-        margin-bottom: 1rem;
+        margin: 0 0 1.0rem 0;
     }
 
     .flavor-label {
@@ -55,16 +52,41 @@ st.markdown(
         padding: 0;
     }
 
-    /* スマホ向け：無駄な余白を削って必ず1行に収める */
+    /* ===== スマホ向けレイアウト強制 ===== */
     @media (max-width: 600px) {
+
+        /* 各行（columnsのラッパ）を横並びに強制 */
         div[data-testid="stHorizontalBlock"] {
+            display: flex !important;
+            flex-wrap: nowrap !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
             gap: 0.1rem !important;
         }
-        div[data-testid="column"] {
+
+        /* カラムの余白を削る */
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
             padding-left: 0 !important;
             padding-right: 0 !important;
             margin-left: 0 !important;
             margin-right: 0 !important;
+        }
+
+        /* ラベルは内容ぶんだけ。取りすぎない */
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(1) {
+            flex: 0 0 auto !important;
+            max-width: 40% !important;
+        }
+
+        /* 左ボタン・数字・右ボタンを横に詰める */
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(2) {
+            flex: 0 0 14% !important;
+        }
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(3) {
+            flex: 0 0 10% !important;
+        }
+        div[data-testid="stHorizontalBlock"] > div[data-testid="column"]:nth-child(4) {
+            flex: 0 0 14% !important;
         }
     }
 
@@ -99,9 +121,10 @@ if "counts" not in st.session_state:
 
 st.header("ソフテニチュロス注文")
 
+# 1行 = テキスト + ◀ + 数字 + ▶
 for flavor in flavors:
-    # ラベル列を小さく、ボタン群を詰める比率（スマホでも1行に入るよう調整）
-    col_label, col_left, col_num, col_right = st.columns([1.2, 0.6, 0.4, 0.6])
+    # PC向けの比率（スマホではCSSで上書きされる）
+    col_label, col_left, col_num, col_right = st.columns([2.5, 0.8, 0.6, 0.8])
 
     with col_label:
         cls = "flavor-label"
