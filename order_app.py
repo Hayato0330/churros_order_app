@@ -2,79 +2,52 @@
 
 import streamlit as st
 
-# ページ設定
-st.set_page_config(page_title="ソフテニチュロス注文", layout="wide")
-
 # タイトル
 st.markdown("<h1 style='text-align:center;'>ソフテニチュロス注文</h1>", unsafe_allow_html=True)
 
-# スタイル設定（スマホ対応）
+# レイアウト
+col1, col2, col3 = st.columns([1, 2, 1], gap="small")
+
+# 三角ボタン（左・右）
+with col1:
+    left = st.button("◀", use_container_width=True)
+with col3:
+    right = st.button("▶", use_container_width=True)
+
+# 中央に画像や数量表示などを配置（例）
+with col2:
+    st.markdown("<p style='text-align:center; font-size:22px;'>数量: 1</p>", unsafe_allow_html=True)
+
+# 注文ボタン（青・横長）
 st.markdown("""
     <style>
-    /* ページ全体を中央寄せ */
-    .main {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-    }
-
-    /* ボタンレイアウトを画面幅に収める */
-    .button-container {
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
-        gap: 10px;
-        width: 100%;
-        max-width: 400px;
-        margin-bottom: 20px;
-    }
-
-    /* 各ボタンの見た目を統一 */
-    .button-container button {
-        flex: 1 1 45%;
-        height: 60px;
-        font-size: 18px;
-    }
-
-    /* 注文ボタン */
-    .order-button button {
-        width: 100%;
-        height: 60px;
-        background-color: #007BFF;
-        color: white;
-        font-size: 20px;
-        border-radius: 10px;
-    }
-
-    /* モバイル用の微調整 */
-    @media (max-width: 600px) {
-        .button-container button {
-            flex: 1 1 48%;
-            height: 55px;
-            font-size: 16px;
+        /* 全体レスポンシブ対応 */
+        @media (max-width: 600px) {
+            .stButton > button {
+                font-size: 20px !important;
+                padding: 0.8em 0 !important;
+            }
         }
+        /* 注文ボタンのデザイン */
         .order-button button {
-            height: 55px;
-            font-size: 18px;
+            background-color: #007BFF;
+            color: white;
+            font-size: 22px;
+            border-radius: 10px;
+            width: 100%;
+            height: 60px;
         }
-    }
+        .order-button button:hover {
+            background-color: #0056b3;
+        }
     </style>
 """, unsafe_allow_html=True)
 
-# 商品ボタン群
-st.markdown('<div class="button-container">', unsafe_allow_html=True)
-col1, col2 = st.columns(2)
-with col1:
-    if st.button("左向き"):
-        st.session_state["direction"] = "left"
-with col2:
-    if st.button("右向き"):
-        st.session_state["direction"] = "right"
+# 横長の青い「注文」ボタン
+st.markdown('<div class="order-button">', unsafe_allow_html=True)
+order = st.button("注文", use_container_width=True)
 st.markdown('</div>', unsafe_allow_html=True)
 
-# 注文ボタン（青色で横長）
-st.markdown('<div class="order-button">', unsafe_allow_html=True)
-if st.button("注文"):
-    st.success("注文が送信されました！")
-st.markdown('</div>', unsafe_allow_html=True)
+# 注文処理の例
+if order:
+    st.success("ご注文ありがとうございます！")
