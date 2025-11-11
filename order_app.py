@@ -1,5 +1,4 @@
 # app1
-
 import streamlit as st
 
 # ページ設定（スマートフォン利用を想定）
