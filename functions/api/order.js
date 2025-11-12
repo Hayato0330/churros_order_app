@@ -2,7 +2,6 @@
 export async function onRequestPost(context) {
   const { request, env } = context;
 
-  // CORS（必要ならオリジンを絞る）
   const cors = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -20,18 +19,23 @@ export async function onRequestPost(context) {
     const choco = toInt(body?.choco);
     const strawberry = toInt(body?.strawberry);
 
-    // 注文番号と日時はサーバ側で付与
     const orderNo = crypto.randomUUID();
-    const createdAt = new Date().toISOString(); // UTC ISO8601
+    const createdAt = new Date().toISOString();
     const served = 0;
 
-    await env.DB.prepare(
-      `INSERT INTO orders (order_no, created_at, plain, choco, strawberry, served)
-       VALUES (?, ?, ?, ?, ?, ?)`
-    ).bind(orderNo, createdAt, plain, choco, strawberry, served).run();
+    // ← 挿入して last_rowid を取得
+    const result = await env.DB
+      .prepare(
+        `INSERT INTO orders (order_no, created_at, plain, choco, strawberry, served)
+         VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      .bind(orderNo, createdAt, plain, choco, strawberry, served)
+      .run();
+
+    const insertId = result?.meta?.last_rowid; // ← ここが新規ID
 
     return new Response(
-      JSON.stringify({ ok: true, orderNo, createdAt }),
+      JSON.stringify({ ok: true, id: insertId, orderNo, createdAt }),
       { status: 200, headers: { "Content-Type": "application/json", ...cors } }
     );
   } catch (err) {
