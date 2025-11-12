@@ -1,4 +1,3 @@
-// functions/api/order.js
 export async function onRequestPost(context) {
   const { request, env } = context;
 
@@ -19,24 +18,24 @@ export async function onRequestPost(context) {
     const choco = toInt(body?.choco);
     const strawberry = toInt(body?.strawberry);
 
-    const orderNo = crypto.randomUUID();
     const createdAt = new Date().toISOString();
     const served = 0;
+    const paid = 0;
 
-    // ★ RETURNING で挿入直後の id を取得
+    // order_no削除済み → paid追加済みスキーマに対応
     const row = await env.DB
       .prepare(
-        `INSERT INTO orders (order_no, created_at, plain, choco, strawberry, served)
+        `INSERT INTO orders (created_at, plain, choco, strawberry, served, paid)
          VALUES (?, ?, ?, ?, ?, ?)
          RETURNING id`
       )
-      .bind(orderNo, createdAt, plain, choco, strawberry, served)
-      .first(); // 1行だけ取得
+      .bind(createdAt, plain, choco, strawberry, served, paid)
+      .first();
 
-    const insertId = row?.id; // ← ここが注文番号として使うID
+    const insertId = row?.id;
 
     return new Response(
-      JSON.stringify({ ok: true, id: insertId, orderNo, createdAt }),
+      JSON.stringify({ ok: true, id: insertId, createdAt }),
       { status: 200, headers: { "Content-Type": "application/json", ...cors } }
     );
   } catch (err) {
