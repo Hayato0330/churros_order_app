@@ -209,7 +209,7 @@
         })
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data?.ok) {
+      if (res.ok && data?.ok) {
 
         // ここでモーダル内容を「完了表示」に切り替え，IDを注文番号として見せる
         const orderId = data.id;   // ← APIが返した挿入ID
