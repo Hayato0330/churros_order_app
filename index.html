@@ -9,20 +9,19 @@
   html, body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif; }
   body {
     padding: 1.2rem clamp(12px, 4vw, 28px) calc(1.2rem + env(safe-area-inset-bottom, 0));
-    background: #fff;
-    color: #222;
+    background: #fff; color: #222;
   }
   .container { max-width: 480px; margin: 0 auto; }
-  h1 { 
+  h1 {
     font-size: clamp(1.6rem, 6vw, 2.4rem);
     font-weight: 800; letter-spacing: .05em; text-align: center;
     margin: 0 0 1.2rem 0;
     padding-top: .6em; /* タイトルを半文字下げるニュアンス */
   }
 
-  /* フレーバーブロック：上段=ラベル, 下段=ボタン行（中央揃え） */
+  /* フレーバーブロック：上段=ラベル，下段=ボタン行（中央揃え） */
   .flavor { margin: 1.0rem 0; }
-  .label { 
+  .label {
     text-align: center; font-weight: 700;
     font-size: clamp(1.1rem, 4.6vw, 1.35rem);
     margin-bottom: .4rem;
@@ -123,7 +122,7 @@
     <button class="complete" id="open-confirm">完了</button>
   </main>
 
-  <!-- ポップアップ（モーダル） -->
+  <!-- 確認ポップアップ（モーダル） -->
   <div class="modal-backdrop" id="modal">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div class="modal-header" id="modal-title">確認</div>
@@ -138,7 +137,7 @@
   </div>
 
 <script>
-  // 0未満禁止・左ボタンは0で無効化
+  /* 0未満禁止・左ボタンは0で無効化 */
   function sync(flavor) {
     const countEl = flavor.querySelector('.count');
     const dec = flavor.querySelector('.dec');
@@ -146,7 +145,7 @@
     dec.disabled = value <= 0;
   }
 
-  // カウント操作
+  /* カウント操作 */
   document.querySelectorAll('.flavor').forEach(flavor => {
     const countEl = flavor.querySelector('.count');
     const dec = flavor.querySelector('.dec');
@@ -164,10 +163,10 @@
       sync(flavor);
     });
 
-    sync(flavor); // 初期同期
+    sync(flavor); /* 初期同期 */
   });
 
-  // モーダル制御
+  /* モーダル制御 */
   const modal = document.getElementById('modal');
   const openBtn = document.getElementById('open-confirm');
   const cancelBtn = document.getElementById('modal-cancel');
@@ -183,9 +182,9 @@
 
   function openModal() {
     const { plain, choco, straw } = getCounts();
-    // 指示通りの改行表現（\n）でメッセージを作成．white-space: pre-line なのでそのまま改行される．
+    /* \n を改行として表示（.modal-body は white-space: pre-line） */
     const text = `プレーン×${plain}\nチョコ×${choco}\nストロベリー×${straw}\nでいいですか？`;
-    messageEl.textContent = text; // pre-lineで改行反映
+    messageEl.textContent = text;
     modal.style.display = 'flex';
   }
 
@@ -195,17 +194,43 @@
 
   openBtn.addEventListener('click', openModal);
   cancelBtn.addEventListener('click', closeModal);
-  // 確定ボタンは何もしない（要件通り）：押下しても画面状態は変えない
-  confirmBtn.addEventListener('click', () => {
-    // ここはあえて空の動作．将来サーバ送信などを実装可能．
-  });
 
-  // 背景タップで閉じたい場合（任意）
+  /* 確定押下 → /api/order へPOST（UIは変えない） */
+  async function postOrder() {
+    const { plain, choco, straw } = getCounts();
+    try {
+      const res = await fetch("/api/order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plain: Number(plain),
+          choco: Number(choco),
+          strawberry: Number(straw)
+        })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data?.ok) {
+        // 必要ならエラー通知を出す（UIを変えない方針ならコメントのままでも可）
+        // alert(`送信に失敗しました．${data?.error || ''}`);
+      } else {
+        // 成功時もUIは変えない（要件どおり）
+        // もし閉じたい・通知したいなら下を解放：
+        // closeModal();
+        // alert(`注文を受け付けました．注文番号：${data.orderNo}`);
+      }
+    } catch (e) {
+      // ネットワークエラー時の処理（必要に応じて表示）
+      // alert('ネットワークエラーが発生しました．');
+    }
+  }
+  confirmBtn.addEventListener('click', postOrder);
+
+  /* 背景タップで閉じる（任意） */
   modal.addEventListener('click', (e) => {
     if (e.target === modal) closeModal();
   });
 
-  // Escキーで閉じる（任意）
+  /* Escキーで閉じる（任意） */
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
   });
