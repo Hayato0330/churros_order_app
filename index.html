@@ -17,7 +17,7 @@
     font-size: clamp(1.6rem, 6vw, 2.4rem);
     font-weight: 800; letter-spacing: .05em; text-align: center;
     margin: 0 0 1.2rem 0;
-    padding-top: .6em; /* タイトルを“半文字”下げるニュアンス */
+    padding-top: .6em; /* タイトルを半文字下げるニュアンス */
   }
 
   /* フレーバーブロック：上段=ラベル, 下段=ボタン行（中央揃え） */
@@ -50,14 +50,42 @@
     font-weight: 800; font-size: clamp(1.2rem, 5.5vw, 1.5rem);
   }
 
-  .order {
+  /* 完了ボタン */
+  .complete {
     margin-top: 1.6rem;
     width: 100%; height: 3.2rem;
     background: #0b70ff; color: #fff; border: none;
     border-radius: 10px; font-weight: 800;
     font-size: clamp(1.0rem, 4.8vw, 1.2rem);
   }
-  .order:active { transform: scale(.99); }
+  .complete:active { transform: scale(.99); }
+
+  /* ===== モーダル（ポップアップ） ===== */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(0,0,0,.42);
+    display: none; align-items: center; justify-content: center;
+    z-index: 9999; padding: 1rem;
+  }
+  .modal {
+    width: 100%; max-width: 420px; background: #fff; border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.18);
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: .9rem 1rem; font-weight: 800; font-size: 1.05rem; border-bottom: 1px solid #eee;
+    text-align: center;
+  }
+  .modal-body {
+    padding: 1rem; line-height: 1.7; font-size: 1rem; white-space: pre-line;
+  }
+  .modal-actions {
+    display: flex; gap: .6rem; padding: .9rem 1rem; border-top: 1px solid #eee;
+  }
+  .modal-actions .btn {
+    flex: 1; min-width: auto; height: 2.8rem; font-size: 1rem; border-radius: 10px;
+  }
+  .btn-primary { background: #0b70ff; color: #fff; border-color: #0b70ff; }
+  .btn-ghost   { background: #f5f6f8; color: #222; border-color: #e5e7eb; }
 </style>
 </head>
 <body>
@@ -91,8 +119,23 @@
       </div>
     </section>
 
-    <button class="order">注文</button>
+    <!-- 完了ボタン（押すとモーダルを開く） -->
+    <button class="complete" id="open-confirm">完了</button>
   </main>
+
+  <!-- ポップアップ（モーダル） -->
+  <div class="modal-backdrop" id="modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <div class="modal-header" id="modal-title">確認</div>
+      <div class="modal-body" id="modal-message">
+        <!-- 動的にメッセージを差し込む -->
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="modal-cancel">戻る</button>
+        <button class="btn btn-primary" id="modal-confirm">確定</button>
+      </div>
+    </div>
+  </div>
 
 <script>
   // 0未満禁止・左ボタンは0で無効化
@@ -103,6 +146,7 @@
     dec.disabled = value <= 0;
   }
 
+  // カウント操作
   document.querySelectorAll('.flavor').forEach(flavor => {
     const countEl = flavor.querySelector('.count');
     const dec = flavor.querySelector('.dec');
@@ -121,6 +165,49 @@
     });
 
     sync(flavor); // 初期同期
+  });
+
+  // モーダル制御
+  const modal = document.getElementById('modal');
+  const openBtn = document.getElementById('open-confirm');
+  const cancelBtn = document.getElementById('modal-cancel');
+  const confirmBtn = document.getElementById('modal-confirm');
+  const messageEl = document.getElementById('modal-message');
+
+  function getCounts() {
+    const plain = document.querySelector('section[data-key="plain"] .count').textContent.trim();
+    const choco = document.querySelector('section[data-key="choco"] .count').textContent.trim();
+    const straw = document.querySelector('section[data-key="strawberry"] .count').textContent.trim();
+    return { plain, choco, straw };
+  }
+
+  function openModal() {
+    const { plain, choco, straw } = getCounts();
+    // 指示通りの改行表現（\n）でメッセージを作成．white-space: pre-line なのでそのまま改行される．
+    const text = `プレーン×${plain}\nチョコ×${choco}\nストロベリー×${straw}\nでいいですか？`;
+    messageEl.textContent = text; // pre-lineで改行反映
+    modal.style.display = 'flex';
+  }
+
+  function closeModal() {
+    modal.style.display = 'none';
+  }
+
+  openBtn.addEventListener('click', openModal);
+  cancelBtn.addEventListener('click', closeModal);
+  // 確定ボタンは何もしない（要件通り）：押下しても画面状態は変えない
+  confirmBtn.addEventListener('click', () => {
+    // ここはあえて空の動作．将来サーバ送信などを実装可能．
+  });
+
+  // 背景タップで閉じたい場合（任意）
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  // Escキーで閉じる（任意）
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
   });
 </script>
 </body>
