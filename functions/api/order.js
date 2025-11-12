@@ -23,16 +23,17 @@ export async function onRequestPost(context) {
     const createdAt = new Date().toISOString();
     const served = 0;
 
-    // ← 挿入して last_rowid を取得
-    const result = await env.DB
+    // ★ RETURNING で挿入直後の id を取得
+    const row = await env.DB
       .prepare(
         `INSERT INTO orders (order_no, created_at, plain, choco, strawberry, served)
-         VALUES (?, ?, ?, ?, ?, ?)`
+         VALUES (?, ?, ?, ?, ?, ?)
+         RETURNING id`
       )
       .bind(orderNo, createdAt, plain, choco, strawberry, served)
-      .run();
+      .first(); // 1行だけ取得
 
-    const insertId = result?.meta?.last_rowid; // ← ここが新規ID
+    const insertId = row?.id; // ← ここが注文番号として使うID
 
     return new Response(
       JSON.stringify({ ok: true, id: insertId, orderNo, createdAt }),
