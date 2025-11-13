@@ -15,7 +15,14 @@
 
     h1 {
       text-align: center;
-      margin-bottom: 30px;
+      margin-bottom: 10px;
+    }
+
+    #status {
+      text-align: center;
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 20px;
     }
 
     /* 2列レイアウト */
@@ -87,25 +94,34 @@
 <body>
 
   <h1>注文管理画面</h1>
+  <p id="status">読み込み中…</p>
 
   <!-- ★ 2列グリッドレイアウト -->
   <div class="order-grid"></div>
 
   <script>
-    // 注文用アプリ側のAPIのベースURL
-    // 自分の注文アプリのURLに合わせて変更すること
+    // ★ここを「注文用アプリ」のURLに合わせる
     // 例: https://churros-order-app.pages.dev
     const API_BASE = "https://churros-order-app.pages.dev/api";
 
-    // -----------------------
-    // 注文一覧取得
-    // -----------------------
+    const statusEl = document.getElementById("status");
+
     async function loadOrders() {
       try {
+        statusEl.textContent = "読み込み中…";
+
         const res = await fetch(`${API_BASE}/orders`, {
           method: "GET",
         });
+
+        if (!res.ok) {
+          statusEl.textContent = `エラー: ${res.status} ${res.statusText}`;
+          console.error("HTTP error", res.status, res.statusText);
+          return;
+        }
+
         const data = await res.json();
+        console.log("orders response:", data);
 
         // レスポンスが配列だけの場合と { rows: [...] } の場合の両方に対応
         const list = Array.isArray(data)
@@ -114,6 +130,13 @@
 
         const grid = document.querySelector(".order-grid");
         grid.innerHTML = ""; // 一度クリア
+
+        if (list.length === 0) {
+          statusEl.textContent = "未会計または未提供の注文はありません．";
+          return;
+        }
+
+        statusEl.textContent = "";
 
         list.forEach(order => {
           const card = document.createElement("div");
@@ -137,16 +160,13 @@
           grid.appendChild(card);
         });
 
-        // ボタンイベント再セット
         setButtonEvents();
       } catch (e) {
-        console.error("注文一覧の取得に失敗した．", e);
+        statusEl.textContent = "注文一覧の取得に失敗しました．ブラウザのコンソールも確認してください．";
+        console.error("注文一覧の取得に失敗", e);
       }
     }
 
-    // -----------------------
-    // ボタン動作
-    // -----------------------
     function setButtonEvents() {
       document.querySelectorAll(".btn-pay").forEach(btn => {
         if (btn.classList.contains("disabled")) return;
@@ -162,10 +182,9 @@
               },
               body: JSON.stringify({ id }),
             });
-            // 再読み込みして最新状態を反映
             loadOrders();
           } catch (e) {
-            console.error("会計更新に失敗した．", e);
+            console.error("会計更新に失敗した", e);
           }
         };
       });
@@ -184,24 +203,17 @@
               },
               body: JSON.stringify({ id }),
             });
-            // 再読み込みして最新状態を反映
             loadOrders();
           } catch (e) {
-            console.error("提供更新に失敗した．", e);
+            console.error("提供更新に失敗した", e);
           }
         };
       });
     }
 
-    // -----------------------
     // 初回読み込み
-    // -----------------------
     loadOrders();
-
-    // -----------------------
-    // 10秒に1回ポーリング
-    // Cloudflare無料枠でも安全な頻度
-    // -----------------------
+    // 10秒ごとに更新
     setInterval(loadOrders, 10000);
   </script>
 
