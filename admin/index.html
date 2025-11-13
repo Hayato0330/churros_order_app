@@ -164,39 +164,52 @@
         document.querySelectorAll(".btn-pay").forEach(btn => {
         if (btn.classList.contains("disabled")) return;
         btn.onclick = async () => {
-            const id = Number(btn.dataset.id);
-            btn.classList.add("disabled");
-            try {
-            await fetch(`${API_BASE}/paid`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id }),
+        const id = Number(btn.dataset.id);
+        btn.classList.add("disabled");
+        try {
+            const res = await fetch(`${API_BASE}/paid`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id }),
             });
-            loadOrders();
-            } catch (e) {
-            console.error("会計更新に失敗", e);
+            const data = await res.json().catch(() => ({}));
+            console.log("paid result:", res.status, data);
+            if (!res.ok || !data.ok) {
+            alert("会計更新に失敗しました．");
             }
+            loadOrders();
+        } catch (e) {
+            console.error("会計更新に失敗", e);
+            alert("会計更新でエラーが発生しました．");
+        }
         };
         });
 
-        document.querySelectorAll(".btn-serve").forEach(btn => {
+     document.querySelectorAll(".btn-serve").forEach(btn => {
         if (btn.classList.contains("disabled")) return;
         btn.onclick = async () => {
-            const id = Number(btn.dataset.id);
-            btn.classList.add("disabled");
-            try {
-            await fetch(`${API_BASE}/served`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ id }),
+        const id = Number(btn.dataset.id);
+        btn.classList.add("disabled");
+        try {
+            const res = await fetch(`${API_BASE}/served`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id }),
             });
-            loadOrders();
-            } catch (e) {
-            console.error("提供更新に失敗", e);
+            const data = await res.json().catch(() => ({}));
+            console.log("served result:", res.status, data);
+            if (!res.ok || !data.ok) {
+            alert("提供更新に失敗しました．");
             }
+            loadOrders();
+        } catch (e) {
+            console.error("提供更新に失敗", e);
+            alert("提供更新でエラーが発生しました．");
+        }
         };
-        });
+    });
     }
+
 
     loadOrders();
     setInterval(loadOrders, 10000);
