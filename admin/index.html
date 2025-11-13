@@ -100,122 +100,107 @@
   <div class="order-grid"></div>
 
   <script>
-    // ★ここを「注文用アプリ」のURLに合わせる
-    // 例: https://churros-order-app.pages.dev
+    // ★注文用アプリのURLに合わせる
+    // 例: https://softeni-churros.pages.dev/api
     const API_BASE = "https://churros-order-app.pages.dev/api";
 
     const statusEl = document.getElementById("status");
+    const grid = document.querySelector(".order-grid");
 
     async function loadOrders() {
-      try {
+        try {
         statusEl.textContent = "読み込み中…";
 
-        const res = await fetch(`${API_BASE}/orders`, {
-          method: "GET",
-        });
-
+        const res = await fetch(`${API_BASE}/orders`);
         if (!res.ok) {
-          statusEl.textContent = `エラー: ${res.status} ${res.statusText}`;
-          console.error("HTTP error", res.status, res.statusText);
-          return;
+            statusEl.textContent = `エラー: ${res.status} ${res.statusText}`;
+            console.error("HTTP error", res.status, res.statusText);
+            return;
         }
 
-        const data = await res.json();
-        console.log("orders response:", data);
+        const list = await res.json();  // ← さっきの配列そのもの
 
-        // レスポンスが配列だけの場合と { rows: [...] } の場合の両方に対応
-        const list = Array.isArray(data)
-          ? data
-          : (Array.isArray(data.rows) ? data.rows : []);
+        console.log("orders response:", list);
 
-        const grid = document.querySelector(".order-grid");
-        grid.innerHTML = ""; // 一度クリア
+        grid.innerHTML = "";
 
-        if (list.length === 0) {
-          statusEl.textContent = "未会計または未提供の注文はありません．";
-          return;
+        if (!Array.isArray(list) || list.length === 0) {
+            statusEl.textContent = "未会計または未提供の注文はありません．";
+            return;
         }
 
         statusEl.textContent = "";
 
         list.forEach(order => {
-          const card = document.createElement("div");
-          card.className = "order-card";
+            const card = document.createElement("div");
+            card.className = "order-card";
 
-          const paidClass = order.paid ? "disabled" : "";
-          const servedClass = order.served ? "disabled" : "";
+            const paidClass = order.paid ? "disabled" : "";
+            const servedClass = order.served ? "disabled" : "";
 
-          card.innerHTML = `
+            card.innerHTML = `
             <div class="order-id">注文番号：${order.id}</div>
             <div class="order-detail">
-              プレーン × ${order.plain}<br>
-              チョコ × ${order.choco}<br>
-              ストロベリー × ${order.strawberry}
+                プレーン × ${order.plain}<br>
+                チョコ × ${order.choco}<br>
+                ストロベリー × ${order.strawberry}
             </div>
             <div class="btn-area">
-              <button class="btn-pay ${paidClass}" data-id="${order.id}">会計完了</button>
-              <button class="btn-serve ${servedClass}" data-id="${order.id}">提供完了</button>
+                <button class="btn-pay ${paidClass}" data-id="${order.id}">会計完了</button>
+                <button class="btn-serve ${servedClass}" data-id="${order.id}">提供完了</button>
             </div>
-          `;
-          grid.appendChild(card);
+            `;
+            grid.appendChild(card);
         });
 
         setButtonEvents();
-      } catch (e) {
+        } catch (e) {
         statusEl.textContent = "注文一覧の取得に失敗しました．ブラウザのコンソールも確認してください．";
         console.error("注文一覧の取得に失敗", e);
-      }
+        }
     }
 
     function setButtonEvents() {
-      document.querySelectorAll(".btn-pay").forEach(btn => {
+        document.querySelectorAll(".btn-pay").forEach(btn => {
         if (btn.classList.contains("disabled")) return;
-
         btn.onclick = async () => {
-          const id = Number(btn.dataset.id);
-          btn.classList.add("disabled");
-          try {
+            const id = Number(btn.dataset.id);
+            btn.classList.add("disabled");
+            try {
             await fetch(`${API_BASE}/paid`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ id }),
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id }),
             });
             loadOrders();
-          } catch (e) {
-            console.error("会計更新に失敗した", e);
-          }
+            } catch (e) {
+            console.error("会計更新に失敗", e);
+            }
         };
-      });
+        });
 
-      document.querySelectorAll(".btn-serve").forEach(btn => {
+        document.querySelectorAll(".btn-serve").forEach(btn => {
         if (btn.classList.contains("disabled")) return;
-
         btn.onclick = async () => {
-          const id = Number(btn.dataset.id);
-          btn.classList.add("disabled");
-          try {
+            const id = Number(btn.dataset.id);
+            btn.classList.add("disabled");
+            try {
             await fetch(`${API_BASE}/served`, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ id }),
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ id }),
             });
             loadOrders();
-          } catch (e) {
-            console.error("提供更新に失敗した", e);
-          }
+            } catch (e) {
+            console.error("提供更新に失敗", e);
+            }
         };
-      });
+        });
     }
 
-    // 初回読み込み
     loadOrders();
-    // 10秒ごとに更新
     setInterval(loadOrders, 10000);
   </script>
 
-</body>
+ </body>
 </html>
