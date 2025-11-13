@@ -59,6 +59,7 @@
       border: none;
       border-radius: 6px;
       cursor: pointer;
+      transition: opacity 0.1s ease, background-color 0.1s ease;
     }
 
     .btn-pay {
@@ -74,91 +75,135 @@
     button:hover {
       opacity: 0.85;
     }
+
+    button.disabled {
+      background: #ccc !important;
+      cursor: default;
+      opacity: 0.8;
+    }
   </style>
 </head>
 
 <body>
 
-  <h1>注文管理画面（UIテスト）</h1>
+  <h1>注文管理画面</h1>
 
   <!-- ★ 2列グリッドレイアウト -->
-  <div class="order-grid">
-  </div>
+  <div class="order-grid"></div>
 
   <script>
-        const API_BASE = "/api";
+    // 注文用アプリ側のAPIのベースURL
+    // 自分の注文アプリのURLに合わせて変更すること
+    // 例: https://churros-order-app.pages.dev
+    const API_BASE = "https://churros-order-app.pages.dev/api";
 
-        // -----------------------
-        // 注文一覧取得
-        // -----------------------
-        async function loadOrders() {
-        const res = await fetch(`${API_BASE}/orders`);
-        const list = await res.json();
+    // -----------------------
+    // 注文一覧取得
+    // -----------------------
+    async function loadOrders() {
+      try {
+        const res = await fetch(`${API_BASE}/orders`, {
+          method: "GET",
+        });
+        const data = await res.json();
+
+        // レスポンスが配列だけの場合と { rows: [...] } の場合の両方に対応
+        const list = Array.isArray(data)
+          ? data
+          : (Array.isArray(data.rows) ? data.rows : []);
 
         const grid = document.querySelector(".order-grid");
         grid.innerHTML = ""; // 一度クリア
 
         list.forEach(order => {
-            const card = document.createElement("div");
-            card.className = "order-card";
-            card.innerHTML = `
+          const card = document.createElement("div");
+          card.className = "order-card";
+
+          const paidClass = order.paid ? "disabled" : "";
+          const servedClass = order.served ? "disabled" : "";
+
+          card.innerHTML = `
             <div class="order-id">注文番号：${order.id}</div>
             <div class="order-detail">
-                プレーン × ${order.plain}<br>
-                チョコ × ${order.choco}<br>
-                ストロベリー × ${order.strawberry}
+              プレーン × ${order.plain}<br>
+              チョコ × ${order.choco}<br>
+              ストロベリー × ${order.strawberry}
             </div>
             <div class="btn-area">
-                <button class="btn-pay" data-id="${order.id}" ${order.paid ? "style='background:#ccc'" : ""}>会計完了</button>
-                <button class="btn-serve" data-id="${order.id}" ${order.served ? "style='background:#ccc'" : ""}>提供完了</button>
+              <button class="btn-pay ${paidClass}" data-id="${order.id}">会計完了</button>
+              <button class="btn-serve ${servedClass}" data-id="${order.id}">提供完了</button>
             </div>
-            `;
-            grid.appendChild(card);
+          `;
+          grid.appendChild(card);
         });
 
         // ボタンイベント再セット
         setButtonEvents();
-        }
+      } catch (e) {
+        console.error("注文一覧の取得に失敗した．", e);
+      }
+    }
 
-        // -----------------------
-        // ボタン動作
-        // -----------------------
-        function setButtonEvents() {
-        document.querySelectorAll(".btn-pay").forEach(btn => {
-            btn.onclick = async () => {
-            btn.style.background = "#ccc";
+    // -----------------------
+    // ボタン動作
+    // -----------------------
+    function setButtonEvents() {
+      document.querySelectorAll(".btn-pay").forEach(btn => {
+        if (btn.classList.contains("disabled")) return;
+
+        btn.onclick = async () => {
+          const id = Number(btn.dataset.id);
+          btn.classList.add("disabled");
+          try {
             await fetch(`${API_BASE}/paid`, {
-                method: "POST",
-                body: JSON.stringify({ id: btn.dataset.id })
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ id }),
             });
+            // 再読み込みして最新状態を反映
             loadOrders();
-            };
-        });
+          } catch (e) {
+            console.error("会計更新に失敗した．", e);
+          }
+        };
+      });
 
-        document.querySelectorAll(".btn-serve").forEach(btn => {
-            btn.onclick = async () => {
-            btn.style.background = "#ccc";
+      document.querySelectorAll(".btn-serve").forEach(btn => {
+        if (btn.classList.contains("disabled")) return;
+
+        btn.onclick = async () => {
+          const id = Number(btn.dataset.id);
+          btn.classList.add("disabled");
+          try {
             await fetch(`${API_BASE}/served`, {
-                method: "POST",
-                body: JSON.stringify({ id: btn.dataset.id })
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ id }),
             });
+            // 再読み込みして最新状態を反映
             loadOrders();
-            };
-        });
-        }
+          } catch (e) {
+            console.error("提供更新に失敗した．", e);
+          }
+        };
+      });
+    }
 
-        // -----------------------
-        // 初回読み込み
-        // -----------------------
-        loadOrders();
+    // -----------------------
+    // 初回読み込み
+    // -----------------------
+    loadOrders();
 
-        // -----------------------
-        // 60秒に1回だけポーリング
-        // Cloudflare無料枠を絶対超えない
-        // -----------------------
-        setInterval(loadOrders, 10000);
-    </script>
-
+    // -----------------------
+    // 10秒に1回ポーリング
+    // Cloudflare無料枠でも安全な頻度
+    // -----------------------
+    setInterval(loadOrders, 10000);
+  </script>
 
 </body>
 </html>
