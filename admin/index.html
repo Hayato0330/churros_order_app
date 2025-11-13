@@ -83,78 +83,82 @@
 
   <!-- ★ 2列グリッドレイアウト -->
   <div class="order-grid">
-
-    <!-- 注文1 -->
-    <div class="order-card">
-      <div class="order-id">注文番号：1</div>
-      <div class="order-detail">
-        プレーン × 2<br>
-        チョコ × 1<br>
-        ストロベリー × 0
-      </div>
-      <div class="btn-area">
-        <button class="btn-pay">会計完了</button>
-        <button class="btn-serve">提供完了</button>
-      </div>
-    </div>
-
-    <!-- 注文2 -->
-    <div class="order-card">
-      <div class="order-id">注文番号：2</div>
-      <div class="order-detail">
-        プレーン × 0<br>
-        チョコ × 3<br>
-        ストロベリー × 1
-      </div>
-      <div class="btn-area">
-        <button class="btn-pay">会計完了</button>
-        <button class="btn-serve">提供完了</button>
-      </div>
-    </div>
-
-    <!-- 注文3 -->
-    <div class="order-card">
-      <div class="order-id">注文番号：3</div>
-      <div class="order-detail">
-        プレーン × 1<br>
-        チョコ × 0<br>
-        ストロベリー × 2
-      </div>
-      <div class="btn-area">
-        <button class="btn-pay">会計完了</button>
-        <button class="btn-serve">提供完了</button>
-      </div>
-    </div>
-
-    <!-- 注文4 -->
-    <div class="order-card">
-      <div class="order-id">注文番号：4</div>
-      <div class="order-detail">
-        プレーン × 4<br>
-        チョコ × 2<br>
-        ストロベリー × 1
-      </div>
-      <div class="btn-area">
-        <button class="btn-pay">会計完了</button>
-        <button class="btn-serve">提供完了</button>
-      </div>
-    </div>
-
-    <!-- 注文5 -->
-    <div class="order-card">
-      <div class="order-id">注文番号：5</div>
-      <div class="order-detail">
-        プレーン × 1<br>
-        チョコ × 1<br>
-        ストロベリー × 1
-      </div>
-      <div class="btn-area">
-        <button class="btn-pay">会計完了</button>
-        <button class="btn-serve">提供完了</button>
-      </div>
-    </div>
-
   </div>
+
+  <script>
+        const API_BASE = "/api";
+
+        // -----------------------
+        // 注文一覧取得
+        // -----------------------
+        async function loadOrders() {
+        const res = await fetch(`${API_BASE}/orders`);
+        const list = await res.json();
+
+        const grid = document.querySelector(".order-grid");
+        grid.innerHTML = ""; // 一度クリア
+
+        list.forEach(order => {
+            const card = document.createElement("div");
+            card.className = "order-card";
+            card.innerHTML = `
+            <div class="order-id">注文番号：${order.id}</div>
+            <div class="order-detail">
+                プレーン × ${order.plain}<br>
+                チョコ × ${order.choco}<br>
+                ストロベリー × ${order.strawberry}
+            </div>
+            <div class="btn-area">
+                <button class="btn-pay" data-id="${order.id}" ${order.paid ? "style='background:#ccc'" : ""}>会計完了</button>
+                <button class="btn-serve" data-id="${order.id}" ${order.served ? "style='background:#ccc'" : ""}>提供完了</button>
+            </div>
+            `;
+            grid.appendChild(card);
+        });
+
+        // ボタンイベント再セット
+        setButtonEvents();
+        }
+
+        // -----------------------
+        // ボタン動作
+        // -----------------------
+        function setButtonEvents() {
+        document.querySelectorAll(".btn-pay").forEach(btn => {
+            btn.onclick = async () => {
+            btn.style.background = "#ccc";
+            await fetch(`${API_BASE}/paid`, {
+                method: "POST",
+                body: JSON.stringify({ id: btn.dataset.id })
+            });
+            loadOrders();
+            };
+        });
+
+        document.querySelectorAll(".btn-serve").forEach(btn => {
+            btn.onclick = async () => {
+            btn.style.background = "#ccc";
+            await fetch(`${API_BASE}/served`, {
+                method: "POST",
+                body: JSON.stringify({ id: btn.dataset.id })
+            });
+            loadOrders();
+            };
+        });
+        }
+
+        // -----------------------
+        // 初回読み込み
+        // -----------------------
+        loadOrders();
+
+        // -----------------------
+        // 60秒に1回だけポーリング
+        // Cloudflare無料枠を絶対超えない
+        // -----------------------
+        setInterval(loadOrders, 60000);
+    </script>
+
 
 </body>
 </html>
