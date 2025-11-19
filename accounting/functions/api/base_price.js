@@ -15,9 +15,9 @@ export async function onRequest(context) {
       .first();
 
     // 未設定ならデフォルト値を返す（好きな値に変えてよい）
-    const plain = row?.plain ?? 300;
-    const choco = row?.choco ?? 350;
-    const strawberry = row?.strawberry ?? 380;
+    const plain = row?.plain ?? 250;
+    const choco = row?.choco ?? 300;
+    const strawberry = row?.strawberry ?? 300;
 
     return new Response(JSON.stringify({ plain, choco, strawberry }), {
       status: 200,
