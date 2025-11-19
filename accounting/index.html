@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>チュロス売上確認ツール</title>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans JP", sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f5f5f5;
+      color: #222;
+    }
+    h1 {
+      text-align: center;
+      margin: 0 0 16px;
+      font-size: 22px;
+    }
+    h2 {
+      margin-top: 24px;
+      margin-bottom: 8px;
+      font-size: 18px;
+      border-left: 4px solid #ff9800;
+      padding-left: 8px;
+    }
+    section {
+      background: #fff;
+      border-radius: 10px;
+      padding: 12px 14px 16px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      margin-bottom: 16px;
+      max-width: 720px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    label {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 14px;
+    }
+    input[type="number"],
+    input[type="datetime-local"],
+    input[type="date"],
+    input[type="text"] {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 8px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+      margin-bottom: 8px;
+    }
+    .row-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+    button {
+      border: none;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .btn-primary {
+      background: #1976d2;
+      color: #fff;
+    }
+    .btn-secondary {
+      background: #eeeeee;
+      color: #333;
+    }
+    .btn-primary:active,
+    .btn-secondary:active {
+      transform: scale(0.98);
+    }
+    .current-price {
+      font-size: 14px;
+      margin-top: 4px;
+      color: #444;
+    }
+    .small-note {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    th, td {
+      border-bottom: 1px solid #eee;
+      padding: 4px 6px;
+      text-align: left;
+    }
+    th {
+      background: #fafafa;
+    }
+    .summary-result {
+      margin-top: 8px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+  <h1>チュロス売上確認ツール</h1>
+
+  <!-- 基本価格の設定 -->
+  <section id="base-price-section">
+    <h2>基本価格の設定</h2>
+    <div class="row-3">
+      <div>
+        <label for="base-plain">プレーン（円）</label>
+        <input type="number" id="base-plain" min="0" step="10" />
+      </div>
+      <div>
+        <label for="base-choco">チョコ（円）</label>
+        <input type="number" id="base-choco" min="0" step="10" />
+      </div>
+      <div>
+        <label for="base-straw">ストロベリー（円）</label>
+        <input type="number" id="base-straw" min="0" step="10" />
+      </div>
+    </div>
+    <button class="btn-primary" id="save-base-price">基本価格を保存</button>
+    <div class="current-price" id="current-base-price">現在の基本価格：取得中…</div>
+    <div class="small-note">※上の値を変更して「基本価格を保存」を押すと更新される．</div>
+  </section>
+
+  <!-- 値引きスケジュールの設定 -->
+  <section id="rules-section">
+    <h2>値引きスケジュールの設定</h2>
+    <label for="rule-start">価格が変わる日時（例：閉店前セール開始時刻）</label>
+    <input type="datetime-local" id="rule-start" />
+    <div class="row-3">
+      <div>
+        <label for="rule-plain">プレーン（円）</label>
+        <input type="number" id="rule-plain" min="0" step="10" />
+      </div>
+      <div>
+        <label for="rule-choco">チョコ（円）</label>
+        <input type="number" id="rule-choco" min="0" step="10" />
+      </div>
+      <div>
+        <label for="rule-straw">ストロベリー（円）</label>
+        <input type="number" id="rule-straw" min="0" step="10" />
+      </div>
+    </div>
+    <label for="rule-note">メモ（任意，例：閉店30分前セール）</label>
+    <input type="text" id="rule-note" />
+    <button class="btn-primary" id="add-rule">この価格ルールを追加</button>
+    <div class="small-note">※指定した日時以降は，そのルールの価格が適用される．</div>
+
+    <h3 style="margin-top:12px;font-size:15px;">登録済みの価格ルール</h3>
+    <div id="rules-list">読み込み中…</div>
+  </section>
+
+  <!-- 日別売上の確認 -->
+  <section id="summary-section">
+    <h2>日別売上の確認</h2>
+    <label for="summary-date">日付を選択</label>
+    <input type="date" id="summary-date" />
+    <button class="btn-secondary" id="load-summary">この日の売上を表示</button>
+
+    <div class="summary-result" id="summary-result">
+      日付を選んで「この日の売上を表示」を押すと集計結果が出る．
+    </div>
+  </section>
+
+  <script>
+    // 同じプロジェクト内の Functions を叩くので相対パスでよい
+    const API_BASE = "/api";
+
+    // -------------------------
+    // 基本価格の取得・表示
+    // -------------------------
+    async function fetchBasePrice() {
+      try {
+        const res = await fetch(`${API_BASE}/base_price`);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        const { plain, choco, strawberry } = data;
+
+        document.getElementById("current-base-price").textContent =
+          `現在の基本価格：プレーン ${plain} 円，チョコ ${choco} 円，ストロベリー ${strawberry} 円`;
+
+        // フォームにも反映
+        document.getElementById("base-plain").value = plain;
+        document.getElementById("base-choco").value = choco;
+        document.getElementById("base-straw").value = strawberry;
+      } catch (e) {
+        console.error("基本価格の取得に失敗", e);
+        document.getElementById("current-base-price").textContent =
+          "現在の基本価格：取得に失敗した．";
+      }
+    }
+
+    async function saveBasePrice() {
+      const plain = Number(document.getElementById("base-plain").value || 0);
+      const choco = Number(document.getElementById("base-choco").value || 0);
+      const straw = Number(document.getElementById("base-straw").value || 0);
+
+      try {
+        const res = await fetch(`${API_BASE}/base_price`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ plain, choco, strawberry: straw }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          alert("基本価格の保存に失敗した．");
+          return;
+        }
+        alert("基本価格を保存した．");
+        fetchBasePrice();
+      } catch (e) {
+        console.error("基本価格の保存に失敗", e);
+        alert("基本価格の保存でエラーが発生した．");
+      }
+    }
+
+    document.getElementById("save-base-price").addEventListener("click", saveBasePrice);
+
+    // -------------------------
+    // 価格ルール一覧の取得・表示
+    // -------------------------
+    async function fetchRules() {
+      const container = document.getElementById("rules-list");
+      container.textContent = "読み込み中…";
+      try {
+        const res = await fetch(`${API_BASE}/price_rules`);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const data = await res.json();
+        const rules = Array.isArray(data) ? data : (data.rules || []);
+
+        if (rules.length === 0) {
+          container.textContent = "登録されているルールはまだない．";
+          return;
+        }
+
+        const table = document.createElement("table");
+        table.innerHTML = `
+          <thead>
+            <tr>
+              <th>開始日時</th>
+              <th>プレーン</th>
+              <th>チョコ</th>
+              <th>ストロベリー</th>
+              <th>メモ</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        `;
+        const tbody = table.querySelector("tbody");
+
+        rules.forEach(r => {
+          const tr = document.createElement("tr");
+          const start = new Date(r.start_at);
+          const jp = `${start.getFullYear()}-${String(start.getMonth()+1).padStart(2,"0")}-${String(start.getDate()).padStart(2,"0")} ${String(start.getHours()).padStart(2,"0")}:${String(start.getMinutes()).padStart(2,"0")}`;
+
+          tr.innerHTML = `
+            <td>${jp}</td>
+            <td>${r.plain}</td>
+            <td>${r.choco}</td>
+            <td>${r.strawberry}</td>
+            <td>${r.note || ""}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        container.innerHTML = "";
+        container.appendChild(table);
+      } catch (e) {
+        console.error("価格ルールの取得に失敗", e);
+        container.textContent = "価格ルールの取得に失敗した．";
+      }
+    }
+
+    async function addRule() {
+      const startLocal = document.getElementById("rule-start").value; // "YYYY-MM-DDTHH:mm"
+      const plain = Number(document.getElementById("rule-plain").value || 0);
+      const choco = Number(document.getElementById("rule-choco").value || 0);
+      const straw = Number(document.getElementById("rule-straw").value || 0);
+      const note = document.getElementById("rule-note").value || "";
+
+      if (!startLocal) {
+        alert("開始日時を入力してほしい．");
+        return;
+      }
+
+      // ローカル(JST)としてISO文字列に変換（+09:00付き）
+      const startIso = new Date(startLocal + ":00+09:00").toISOString();
+
+      try {
+        const res = await fetch(`${API_BASE}/price_rules`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            start_at: startIso,
+            plain,
+            choco,
+            strawberry: straw,
+            note,
+          }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.ok) {
+          alert("価格ルールの登録に失敗した．");
+          return;
+        }
+        alert("価格ルールを追加した．");
+        // 入力欄を軽くリセット
+        document.getElementById("rule-note").value = "";
+        fetchRules();
+      } catch (e) {
+        console.error("価格ルールの登録に失敗", e);
+        alert("価格ルールの登録でエラーが発生した．");
+      }
+    }
+
+    document.getElementById("add-rule").addEventListener("click", addRule);
+
+    // -------------------------
+    // 日別売上の取得・表示
+    // -------------------------
+    async function loadSummary() {
+      const date = document.getElementById("summary-date").value;
+      const resultEl = document.getElementById("summary-result");
+      if (!date) {
+        alert("日付を選択してほしい．");
+        return;
+      }
+      resultEl.textContent = "集計中…";
+
+      try {
+        const res = await fetch(`${API_BASE}/daily_summary?date=${encodeURIComponent(date)}`);
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok || !data.ok) {
+          resultEl.textContent = `集計に失敗した．${data.error || ""}`;
+          return;
+        }
+
+        resultEl.innerHTML = `
+          <div>対象日：${data.date}</div>
+          <div>プレーン：${data.totalPlain} 個</div>
+          <div>チョコ：${data.totalChoco} 個</div>
+          <div>ストロベリー：${data.totalStrawberry} 個</div>
+          <div style="margin-top:4px;font-weight:bold;">合計売上：${data.totalAmount.toLocaleString()} 円</div>
+        `;
+      } catch (e) {
+        console.error("売上集計に失敗", e);
+        resultEl.textContent = "売上集計でエラーが発生した．";
+      }
+    }
+
+    document.getElementById("load-summary").addEventListener("click", loadSummary);
+
+    // -------------------------
+    // 初期ロード
+    // -------------------------
+    fetchBasePrice();
+    fetchRules();
+  </script>
+</body>
+</html>
