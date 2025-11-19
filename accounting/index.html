@@ -133,6 +133,10 @@ async function loadBasePrice() {
     チョコ：${data.choco} 円　
     ストロベリー：${data.strawberry} 円
   `;
+
+  document.getElementById("base-plain").value = data.plain;
+  document.getElementById("base-choco").value = data.choco;
+  document.getElementById("base-strawberry").value = data.strawberry;
 }
 
 // ▼ 基本価格保存
@@ -157,6 +161,17 @@ async function saveDiscountPrice() {
   };
   await fetch(`${API}/pricehistory`, { method:"POST", body: JSON.stringify(body) });
   alert("保存しました");
+}
+
+async function loadLatestDiscount() {
+  const res = await fetch(`${API}/pricehistory?latest=1`);
+  const data = await res.json();
+  if (!data) return;
+
+  document.getElementById("discount-date").value = data.apply_at.slice(0,16);
+  document.getElementById("discount-plain").value = data.plain;
+  document.getElementById("discount-choco").value = data.choco;
+  document.getElementById("discount-strawberry").value = data.strawberry;
 }
 
 // ▼ 日別売上表示
@@ -205,6 +220,7 @@ async function loadSales() {
 
 // 初期処理
 loadBasePrice();
+loadLatestDiscount();
 
 </script>
 </body>
