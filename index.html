@@ -280,6 +280,7 @@
         document.querySelectorAll('.count').forEach(c => (c.textContent = '0'));
         document.querySelectorAll('.dec').forEach(b => (b.disabled = true));
 
+        cancelBtn.style.display = "none";
         confirmBtn.textContent = '閉じる';
         confirmBtn.dataset.mode = 'close';
       } else {
