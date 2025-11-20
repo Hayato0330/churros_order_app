@@ -183,9 +183,8 @@
 
   function openModal() {
     const { plain, choco, straw } = getCounts();
-
-    // ★ 合計が0なら注文できない
     const total = plain + choco + straw;
+
     if (total === 0) {
       alert('プレーン・チョコ・ストロベリーのいずれかを1つ以上選んでください。');
       return;
@@ -195,10 +194,10 @@
     messageEl.textContent = text;
     document.getElementById('modal-title').textContent = '確認';
 
-    // ボタン表示とラベルを元に戻す（前回の状態が残らないように）
-    cancelBtn.textContent = '戻る';
+    // ★ 2回目以降のために必ず「確定」モードに戻す
     confirmBtn.textContent = '確定';
-    confirmBtn.disabled = false;
+    confirmBtn.dataset.mode = "confirm";
+
     modal.style.display = 'flex';
   }
 
@@ -223,39 +222,55 @@
           strawberry: straw
         })
       });
-      const data = await res.json().catch(() => ({}));
-      if (res.ok && data?.ok) {
-        const orderId = data.id; // DBのidを注文番号として表示 :contentReference[oaicite:1]{index=1}
 
-        // 完了メッセージに切り替え
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok && data?.ok) {
+        const orderId = data.id;
+
+        // 完了ポップアップへ変更
         document.getElementById('modal-title').textContent = '完了';
         messageEl.textContent =
           `ご注文を受け付けました。\n注文番号：${orderId}\nこの番号をスタッフにお見せください。`;
 
-        // カウントをリセット
+        // カウントリセット
         document.querySelectorAll('.count').forEach(el => el.textContent = '0');
         document.querySelectorAll('.dec').forEach(btn => btn.disabled = true);
 
-        // 「確定」ボタンは一旦閉じる専用にする
+        // ボタンのラベルと動作を「閉じる」専用に
         confirmBtn.textContent = '閉じる';
-        confirmBtn.onclick = closeModal;
+        confirmBtn.dataset.mode = "close";
+
       } else {
+        document.getElementById('modal-title').textContent = 'エラー';
         messageEl.textContent = `送信に失敗しました。もう一度お試しください。\n${data?.error || ''}`;
+        confirmBtn.textContent = '閉じる';
+        confirmBtn.dataset.mode = "close";
       }
-    } catch (e) {
+
+    } catch {
+      document.getElementById('modal-title').textContent = '通信エラー';
       messageEl.textContent = 'ネットワークエラーが発生しました。通信環境をご確認ください。';
+      confirmBtn.textContent = '閉じる';
+      confirmBtn.dataset.mode = "close";
     }
   }
 
+
   // 確定ボタンの基本挙動（毎回、openModal 時にラベルなどをリセットするので問題ない）
-  confirmBtn.addEventListener('click', function handleConfirm() {
-    // 確認モードのときだけ postOrder を呼ぶ想定
-    if (confirmBtn.textContent === '確定') {
+  confirmBtn.addEventListener('click', function () {
+    const mode = confirmBtn.dataset.mode || "confirm";
+
+    if (mode === "confirm") {
       postOrder();
-    } else if (confirmBtn.textContent === '閉じる') {
+    } else if (mode === "close") {
       closeModal();
+      // 次回の注文準備（ボタン状態をリセット）
+      confirmBtn.textContent = '確定';
+      confirmBtn.dataset.mode = "confirm";
     }
   });
+
 
   /* 背景タップで閉じる */
   modal.addEventListener('click', (e) => {
