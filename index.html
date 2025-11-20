@@ -4,283 +4,227 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>ソフテニチュロス注文</title>
+
 <style>
-  :root { --gap: 0.8rem; --btn-size: 3.2rem; --radius: 12px; }
-  html, body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif; }
+  :root { --btn-size: 3.1rem; --gap: .8rem; }
   body {
-    padding: 1.2rem clamp(12px, 4vw, 28px) calc(1.2rem + env(safe-area-inset-bottom, 0));
-    background: #fff; color: #222;
+    margin: 0; background: #fff; color: #222;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans JP", sans-serif;
+    padding: 1.2rem clamp(12px, 4vw, 28px) calc(1.2rem + env(safe-area-inset-bottom,0));
   }
   .container { max-width: 480px; margin: 0 auto; }
   h1 {
+    margin: 0 0 1.3rem 0;
+    text-align: center;
     font-size: clamp(1.6rem, 6vw, 2.4rem);
-    font-weight: 800; letter-spacing: .05em; text-align: center;
-    margin: 0 0 1.2rem 0;
-    padding-top: .6em; /* タイトルを半文字下げるニュアンス */
+    font-weight: 800;
+    letter-spacing: .05em;
+    padding-top: .6em;
   }
 
-  /* フレーバーブロック：上段=ラベル，下段=ボタン行（中央揃え） */
-  .flavor { margin: 1.0rem 0; }
-  .label {
-    text-align: center; font-weight: 700;
-    font-size: clamp(1.1rem, 4.6vw, 1.35rem);
-    margin-bottom: .4rem;
-  }
+  .flavor { margin: 1.2rem 0; }
+  .label { text-align: center; font-weight: 700; font-size: 1.25rem; margin-bottom: .3rem; }
   .label.choco { color: #8B4513; }
   .label.strawberry { color: #E60033; }
 
-  .row {
-    display: flex; align-items: center; justify-content: center;
-    gap: var(--gap);
-  }
+  .row { display: flex; justify-content: center; align-items: center; gap: var(--gap); }
   .btn {
+    display: inline-flex; justify-content: center; align-items: center;
     min-width: var(--btn-size); height: var(--btn-size);
-    border-radius: var(--radius);
-    border: 1px solid #e4e6eb; background: #f7f8fa;
-    font-size: clamp(1.1rem, 5vw, 1.4rem); font-weight: 800;
-    display: inline-flex; align-items: center; justify-content: center;
-    touch-action: manipulation; user-select: none;
+    border-radius: 12px; border: 1px solid #e4e6eb; background: #f7f8fa;
+    font-size: 1.35rem; font-weight: 800; user-select: none; touch-action: manipulation;
   }
-  .btn:active { transform: scale(.98); background: #eceff3; }
-  .btn[disabled] { opacity: .45; pointer-events: none; }
+  .btn:active { transform: scale(.97); background: #eceff3; }
+  .btn[disabled] { opacity: .4; pointer-events: none; }
 
   .count {
-    min-width: 3.2rem; text-align: center;
-    font-weight: 800; font-size: clamp(1.2rem, 5.5vw, 1.5rem);
+    min-width: 3rem; text-align: center;
+    font-size: 1.45rem; font-weight: 800;
   }
 
-  /* 完了ボタン */
   .complete {
-    margin-top: 1.6rem;
-    width: 100%; height: 3.2rem;
+    width: 100%; margin-top: 1.7rem;
+    height: 3.2rem;
     background: #0b70ff; color: #fff; border: none;
-    border-radius: 10px; font-weight: 800;
-    font-size: clamp(1.0rem, 4.8vw, 1.2rem);
+    font-weight: 800; font-size: 1.15rem;
+    border-radius: 10px;
   }
   .complete:active { transform: scale(.99); }
 
-  /* ===== モーダル（ポップアップ） ===== */
+  /* ===== モーダル ===== */
   .modal-backdrop {
     position: fixed; inset: 0; background: rgba(0,0,0,.42);
-    display: none; align-items: center; justify-content: center;
-    z-index: 9999; padding: 1rem;
+    display: none; justify-content: center; align-items: center;
+    padding: 1rem; z-index: 9999;
   }
   .modal {
-    width: 100%; max-width: 420px; background: #fff; border-radius: 14px;
-    box-shadow: 0 10px 30px rgba(0,0,0,.18);
-    overflow: hidden;
+    width: 100%; max-width: 420px;
+    background: #fff; border-radius: 14px;
+    overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,.18);
   }
-  .modal-header {
-    padding: .9rem 1rem; font-weight: 800; font-size: 1.05rem; border-bottom: 1px solid #eee;
-    text-align: center;
-  }
-  .modal-body {
-    padding: 1rem; line-height: 1.7; font-size: 1rem; white-space: pre-line;
-  }
-  .modal-actions {
-    display: flex; gap: .6rem; padding: .9rem 1rem; border-top: 1px solid #eee;
-  }
+  .modal-header { font-weight: 800; font-size: 1.1rem; padding: 1rem; text-align: center; border-bottom: 1px solid #eee; }
+  .modal-body { padding: 1.1rem; line-height: 1.65; white-space: pre-line; }
+  .modal-actions { display: flex; gap: .6rem; padding: 1rem; border-top: 1px solid #eee; }
   .modal-actions .btn {
-    flex: 1; min-width: auto; height: 2.8rem; font-size: 1rem; border-radius: 10px;
+    flex: 1; height: 2.8rem; font-size: 1rem; border-radius: 10px;
   }
   .btn-primary { background: #0b70ff; color: #fff; border-color: #0b70ff; }
-  .btn-ghost   { background: #f5f6f8; color: #222; border-color: #e5e7eb; }
+  .btn-ghost { background: #f5f6f8; color: #222; border-color: #e5e7eb; }
 </style>
 </head>
+
 <body>
   <main class="container">
     <h1>ソフテニチュロス注文</h1>
 
+    <!-- ▼ プレーン -->
     <section class="flavor" data-key="plain">
       <div class="label">プレーン</div>
       <div class="row">
-        <button class="btn dec" aria-label="プレーンを1減らす">◀</button>
-        <div class="count" aria-live="polite">0</div>
-        <button class="btn inc" aria-label="プレーンを1増やす">▶</button>
+        <button class="btn dec">◀</button>
+        <div class="count">0</div>
+        <button class="btn inc">▶</button>
       </div>
     </section>
 
+    <!-- ▼ チョコ -->
     <section class="flavor" data-key="choco">
       <div class="label choco">チョコ</div>
       <div class="row">
-        <button class="btn dec" aria-label="チョコを1減らす">◀</button>
-        <div class="count" aria-live="polite">0</div>
-        <button class="btn inc" aria-label="チョコを1増やす">▶</button>
+        <button class="btn dec">◀</button>
+        <div class="count">0</div>
+        <button class="btn inc">▶</button>
       </div>
     </section>
 
+    <!-- ▼ ストロベリー -->
     <section class="flavor" data-key="strawberry">
       <div class="label strawberry">ストロベリー</div>
       <div class="row">
-        <button class="btn dec" aria-label="ストロベリーを1減らす">◀</button>
-        <div class="count" aria-live="polite">0</div>
-        <button class="btn inc" aria-label="ストロベリーを1増やす">▶</button>
+        <button class="btn dec">◀</button>
+        <div class="count">0</div>
+        <button class="btn inc">▶</button>
       </div>
     </section>
 
-    <!-- 完了ボタン（押すとモーダルを開く） -->
     <button class="complete" id="open-confirm">完了</button>
   </main>
 
-  <!-- 確認ポップアップ（モーダル） -->
+  <!-- ====== ポップアップ ====== -->
   <div class="modal-backdrop" id="modal">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+    <div class="modal">
       <div class="modal-header" id="modal-title">確認</div>
-      <div class="modal-body" id="modal-message">
-        <!-- 動的にメッセージを差し込む -->
-      </div>
+      <div class="modal-body" id="modal-message"></div>
       <div class="modal-actions">
         <button class="btn btn-ghost" id="modal-cancel">戻る</button>
-        <button class="btn btn-primary" id="modal-confirm">確定</button>
+        <button class="btn btn-primary" id="modal-confirm" data-mode="confirm">確定</button>
       </div>
     </div>
   </div>
 
 <script>
-  /* 0未満禁止・左ボタンは0で無効化 */
+  /* カウント同期（減ボタンの無効制御） */
   function sync(flavor) {
-    const countEl = flavor.querySelector('.count');
-    const dec = flavor.querySelector('.dec');
-    const value = parseInt(countEl.textContent, 10) || 0;
-    dec.disabled = value <= 0;
+    const count = Number(flavor.querySelector('.count').textContent) || 0;
+    flavor.querySelector('.dec').disabled = count <= 0;
   }
 
   /* カウント操作 */
-  document.querySelectorAll('.flavor').forEach(flavor => {
-    const countEl = flavor.querySelector('.count');
-    const dec = flavor.querySelector('.dec');
-    const inc = flavor.querySelector('.inc');
-
-    dec.addEventListener('click', () => {
-      let v = parseInt(countEl.textContent, 10) || 0;
-      if (v > 0) countEl.textContent = String(v - 1);
-      sync(flavor);
+  document.querySelectorAll('.flavor').forEach(f => {
+    const countEl = f.querySelector('.count');
+    f.querySelector('.dec').addEventListener('click', () => {
+      let v = Number(countEl.textContent);
+      if (v > 0) countEl.textContent = v - 1;
+      sync(f);
     });
-
-    inc.addEventListener('click', () => {
-      let v = parseInt(countEl.textContent, 10) || 0;
-      countEl.textContent = String(v + 1);
-      sync(flavor);
+    f.querySelector('.inc').addEventListener('click', () => {
+      countEl.textContent = Number(countEl.textContent) + 1;
+      sync(f);
     });
-
-    sync(flavor); /* 初期同期 */
+    sync(f);
   });
 
-  /* 現在の個数を取得（数値化） */
   function getCounts() {
-    const plain = Number(document.querySelector('section[data-key="plain"] .count').textContent.trim()) || 0;
-    const choco = Number(document.querySelector('section[data-key="choco"] .count').textContent.trim()) || 0;
-    const straw = Number(document.querySelector('section[data-key="strawberry"] .count').textContent.trim()) || 0;
-    return { plain, choco, straw };
+    return {
+      plain: Number(document.querySelector('[data-key="plain"] .count').textContent),
+      choco: Number(document.querySelector('[data-key="choco"] .count').textContent),
+      straw: Number(document.querySelector('[data-key="strawberry"] .count').textContent)
+    };
   }
 
-  /* モーダル制御 */
   const modal = document.getElementById('modal');
-  const openBtn = document.getElementById('open-confirm');
   const cancelBtn = document.getElementById('modal-cancel');
   const confirmBtn = document.getElementById('modal-confirm');
-  const messageEl = document.getElementById('modal-message');
+  const titleEl = document.getElementById('modal-title');
+  const msgEl = document.getElementById('modal-message');
 
   function openModal() {
     const { plain, choco, straw } = getCounts();
-    const total = plain + choco + straw;
-
-    if (total === 0) {
-      alert('プレーン・チョコ・ストロベリーのいずれかを1つ以上選んでください。');
+    if (plain + choco + straw === 0) {
+      alert("プレーン・チョコ・ストロベリーのいずれかを1つ以上選んでください。");
       return;
     }
-
-    const text = `プレーン×${plain}\nチョコ×${choco}\nストロベリー×${straw}\nでいいですか？`;
-    messageEl.textContent = text;
-    document.getElementById('modal-title').textContent = '確認';
-
-    // ★ 2回目以降のために必ず「確定」モードに戻す
-    confirmBtn.textContent = '確定';
+    // 確認モード
+    titleEl.textContent = "確認";
+    msgEl.textContent = `プレーン×${plain}\nチョコ×${choco}\nストロベリー×${straw}\nでいいですか？`;
+    confirmBtn.textContent = "確定";
     confirmBtn.dataset.mode = "confirm";
-
-    modal.style.display = 'flex';
+    modal.style.display = "flex";
   }
 
-  function closeModal() {
-    modal.style.display = 'none';
-  }
+  function closeModal() { modal.style.display = "none"; }
 
-  openBtn.addEventListener('click', openModal);
-  cancelBtn.addEventListener('click', closeModal);
+  document.getElementById("open-confirm").addEventListener("click", openModal);
+  cancelBtn.addEventListener("click", closeModal);
 
-  /* 確定押下 → /api/order へPOST */
+  /* 注文送信 → 完了ポップアップ */
   async function postOrder() {
     const { plain, choco, straw } = getCounts();
-
     try {
       const res = await fetch("/api/order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plain,
-          choco,
-          strawberry: straw
-        })
+        body: JSON.stringify({ plain, choco, strawberry: straw })
       });
-
       const data = await res.json().catch(() => ({}));
 
       if (res.ok && data?.ok) {
-        const orderId = data.id;
+        // 成功 → 完了メッセージへ切替
+        titleEl.textContent = "完了";
+        msgEl.textContent = `ご注文を受け付けました。\n注文番号：${data.id}\nこの番号をスタッフにお見せください。`;
 
-        // 完了ポップアップへ変更
-        document.getElementById('modal-title').textContent = '完了';
-        messageEl.textContent =
-          `ご注文を受け付けました。\n注文番号：${orderId}\nこの番号をスタッフにお見せください。`;
+        // リセット
+        document.querySelectorAll('.count').forEach(c => c.textContent = "0");
+        document.querySelectorAll('.dec').forEach(b => b.disabled = true);
 
-        // カウントリセット
-        document.querySelectorAll('.count').forEach(el => el.textContent = '0');
-        document.querySelectorAll('.dec').forEach(btn => btn.disabled = true);
-
-        // ボタンのラベルと動作を「閉じる」専用に
-        confirmBtn.textContent = '閉じる';
+        confirmBtn.textContent = "閉じる";
         confirmBtn.dataset.mode = "close";
-
       } else {
-        document.getElementById('modal-title').textContent = 'エラー';
-        messageEl.textContent = `送信に失敗しました。もう一度お試しください。\n${data?.error || ''}`;
-        confirmBtn.textContent = '閉じる';
+        titleEl.textContent = "エラー";
+        msgEl.textContent = "送信に失敗しました。もう一度お試しください。";
+        confirmBtn.textContent = "閉じる";
         confirmBtn.dataset.mode = "close";
       }
 
     } catch {
-      document.getElementById('modal-title').textContent = '通信エラー';
-      messageEl.textContent = 'ネットワークエラーが発生しました。通信環境をご確認ください。';
-      confirmBtn.textContent = '閉じる';
+      titleEl.textContent = "通信エラー";
+      msgEl.textContent = "ネットワークエラーが発生しました。";
+      confirmBtn.textContent = "閉じる";
       confirmBtn.dataset.mode = "close";
     }
   }
 
-
-  // 確定ボタンの基本挙動（毎回、openModal 時にラベルなどをリセットするので問題ない）
-  confirmBtn.addEventListener('click', function () {
-    const mode = confirmBtn.dataset.mode || "confirm";
-
-    if (mode === "confirm") {
-      postOrder();
-    } else if (mode === "close") {
-      closeModal();
-      // 次回の注文準備（ボタン状態をリセット）
-      confirmBtn.textContent = '確定';
-      confirmBtn.dataset.mode = "confirm";
+  /* 確定 or 閉じる */
+  confirmBtn.addEventListener("click", () => {
+    if (confirmBtn.dataset.mode === "confirm") {
+      postOrder();          // 送信 → 完了画面へ
+    } else {
+      closeModal();         // 次の注文へ
     }
   });
 
-
-  /* 背景タップで閉じる */
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) closeModal();
-  });
-
-  /* Escキーで閉じる */
-  window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
-  });
+  modal.addEventListener("click", e => { if (e.target === modal) closeModal(); });
+  window.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
 </script>
 </body>
 </html>
