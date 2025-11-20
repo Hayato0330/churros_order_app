@@ -26,8 +26,8 @@
       margin-right: auto;
     }
     input, button {
-      padding: 10px;
-      font-size: 16px;
+      padding: 8px;
+      font-size: 14px;
       border-radius: 6px;
     }
     button {
@@ -37,20 +37,21 @@
       border: none;
     }
     button:hover { opacity: 0.85; }
-    .row { margin-bottom: 12px; }
+    .row { margin-bottom: 10px; }
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 15px;
+      margin-top: 12px;
+      font-size: 13px;
     }
     table th, table td {
       border-bottom: 1px solid #ddd;
-      padding: 8px;
+      padding: 6px;
       text-align: center;
     }
     table th { background: #f0f0f0; }
     .total-box {
-      font-size: 24px;
+      font-size: 18px;
       font-weight: bold;
       text-align: right;
       margin-top: 15px;
@@ -75,15 +76,15 @@
     </div>
     <button onclick="saveBasePrice()">保存</button>
 
-    <h3 style="margin-top:25px">現在の基本価格</h3>
+    <h3 style="margin-top:20px">現在の基本価格</h3>
     <div id="current-base"></div>
   </div>
 
-  <!-- ▼ 値下げ価格の登録 -->
+  <!-- ▼ 値下げ価格の登録 ＋ 一覧表示 -->
   <div class="section">
     <h2>値下げ価格の登録</h2>
     <div class="row">
-      適用日時：<input type="datetime-local" id="discount-date">
+      適用開始日時：<input type="datetime-local" id="discount-date">
     </div>
     <div class="row">
       プレーン：<input type="number" id="discount-plain"> 円
@@ -94,7 +95,13 @@
     <div class="row">
       ストロベリー：<input type="number" id="discount-strawberry"> 円
     </div>
+    <div class="row">
+      メモ：<input type="text" id="discount-note" placeholder="例：閉店30分前セール">
+    </div>
     <button onclick="saveDiscountPrice()">保存</button>
+
+    <h3 style="margin-top:20px">登録済みの値下げルール</h3>
+    <div id="discount-rules">読み込み中…</div>
   </div>
 
   <!-- ▼ 売上確認 -->
@@ -124,19 +131,27 @@ const API = "/api";
 
 // ▼ 現在の基本価格読み込み
 async function loadBasePrice() {
-  const res = await fetch(`${API}/base_price`);
-  const data = await res.json();
-  if (!data) return;
+  try {
+    const res = await fetch(`${API}/base_price`);
+    if (!res.ok) {
+      console.error("base_price HTTP error", res.status);
+      return;
+    }
+    const data = await res.json();
+    if (!data) return;
 
-  document.getElementById("current-base").innerHTML = `
-    プレーン：${data.plain} 円　
-    チョコ：${data.choco} 円　
-    ストロベリー：${data.strawberry} 円
-  `;
+    document.getElementById("current-base").innerHTML = `
+      プレーン：${data.plain} 円　
+      チョコ：${data.choco} 円　
+      ストロベリー：${data.strawberry} 円
+    `;
 
-  document.getElementById("base-plain").value = data.plain;
-  document.getElementById("base-choco").value = data.choco;
-  document.getElementById("base-strawberry").value = data.strawberry;
+    document.getElementById("base-plain").value = data.plain;
+    document.getElementById("base-choco").value = data.choco;
+    document.getElementById("base-strawberry").value = data.strawberry;
+  } catch (e) {
+    console.error("loadBasePrice error", e);
+  }
 }
 
 // ▼ 基本価格保存
@@ -146,7 +161,11 @@ async function saveBasePrice() {
     choco: Number(document.getElementById("base-choco").value),
     strawberry: Number(document.getElementById("base-strawberry").value),
   };
-  await fetch(`${API}/base_price`, { method:"POST", body: JSON.stringify(body) });
+  await fetch(`${API}/base_price`, {
+    method:"POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
   alert("保存しました");
   loadBasePrice();
 }
@@ -155,61 +174,111 @@ async function saveBasePrice() {
 async function saveDiscountPrice() {
   const startLocal = document.getElementById("discount-date").value; // "YYYY-MM-DDTHH:mm"
   if (!startLocal) {
-    alert("適用日時を入力してください");
+    alert("適用開始日時を入力してください");
     return;
   }
-
-  // JST として ISO に変換（Workers 内で UTC と比較しやすくする）
+  // JST として ISO に変換（Workers内では UTC で比較する）
   const startIso = new Date(startLocal + ":00+09:00").toISOString();
 
   const body = {
-    start_at: startIso,  // ← API が期待しているキー
+    start_at: startIso,
     plain: Number(document.getElementById("discount-plain").value),
     choco: Number(document.getElementById("discount-choco").value),
     strawberry: Number(document.getElementById("discount-strawberry").value),
-    note: "",
+    note: document.getElementById("discount-note").value || "",
   };
 
   await fetch(`${API}/price_rules`, {
-    method: "POST",
+    method:"POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
   alert("保存しました");
+  await loadDiscountRules();
 }
 
-async function loadLatestDiscount() {
+// ▼ 値下げルール一覧表示（テーブル）
+async function loadDiscountRules() {
+  const container = document.getElementById("discount-rules");
+  container.textContent = "読み込み中…";
+
   try {
-    const res = await fetch(`${API}/price_rules?latest=1`);
+    const res = await fetch(`${API}/price_rules`);
     if (!res.ok) {
-      console.error("price_rules latest HTTP error", res.status);
+      console.error("price_rules HTTP error", res.status);
+      container.textContent = "値下げルールの取得に失敗した．";
       return;
     }
-    const data = await res.json();
-    if (!data) {
-      // 値下げルールがまだない
+    const rules = await res.json();
+    if (!rules || rules.length === 0) {
+      container.textContent = "登録されている値下げルールはまだない．";
       return;
     }
 
-    // start_at(ISO) → datetime-local 用 "YYYY-MM-DDTHH:mm" に変換
-    const dt = new Date(data.start_at);
-    const yyyy = dt.getFullYear();
-    const mm = String(dt.getMonth() + 1).padStart(2, "0");
-    const dd = String(dt.getDate()).padStart(2, "0");
-    const hh = String(dt.getHours()).padStart(2, "0");
-    const mi = String(dt.getMinutes()).padStart(2, "0");
-    const localStr = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+    const table = document.createElement("table");
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>開始日時</th>
+          <th>プレーン</th>
+          <th>チョコ</th>
+          <th>ストロベリー</th>
+          <th>メモ</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    `;
+    const tbody = table.querySelector("tbody");
 
-    document.getElementById("discount-date").value = localStr;
-    document.getElementById("discount-plain").value = data.plain;
-    document.getElementById("discount-choco").value = data.choco;
-    document.getElementById("discount-strawberry").value = data.strawberry;
+    rules.forEach(r => {
+      const dt = new Date(r.start_at);
+      const yyyy = dt.getFullYear();
+      const mm = String(dt.getMonth() + 1).padStart(2, "0");
+      const dd = String(dt.getDate()).padStart(2, "0");
+      const hh = String(dt.getHours()).padStart(2, "0");
+      const mi = String(dt.getMinutes()).padStart(2, "0");
+      const jp = `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${r.id}</td>
+        <td>${jp}</td>
+        <td>${r.plain}</td>
+        <td>${r.choco}</td>
+        <td>${r.strawberry}</td>
+        <td>${r.note || ""}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    container.innerHTML = "";
+    container.appendChild(table);
+
+    // ついでに一番新しいルールをフォームに反映しておく
+    const last = rules[rules.length - 1];
+    if (last) {
+      const dt = new Date(last.start_at);
+      const yyyy = dt.getFullYear();
+      const mm = String(dt.getMonth() + 1).padStart(2, "0");
+      const dd = String(dt.getDate()).padStart(2, "0");
+      const hh = String(dt.getHours()).padStart(2, "0");
+      const mi = String(dt.getMinutes()).padStart(2, "0");
+      const localStr = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+
+      document.getElementById("discount-date").value = localStr;
+      document.getElementById("discount-plain").value = last.plain;
+      document.getElementById("discount-choco").value = last.choco;
+      document.getElementById("discount-strawberry").value = last.strawberry;
+      document.getElementById("discount-note").value = last.note || "";
+    }
   } catch (e) {
-    console.error("loadLatestDiscount error", e);
+    console.error("loadDiscountRules error", e);
+    container.textContent = "値下げルールの取得でエラーが発生した．";
   }
 }
 
-// ▼ 日別売上表示
+// ▼ 日別売上表示（基本／値下げを分けて表示）
 async function loadSales() {
   const date = document.getElementById("sales-date").value;
   if (!date) {
@@ -217,46 +286,62 @@ async function loadSales() {
     return;
   }
 
-  const res = await fetch(`${API}/sales?date=${date}`);
-  const data = await res.json();
-
   const table = document.getElementById("sales-table");
   const tbody = table.querySelector("tbody");
   const totalBox = document.getElementById("sales-total");
-  tbody.innerHTML = ""; // 初期化
 
-  table.style.display = "table";
-  totalBox.style.display = "block";
+  table.style.display = "none";
+  totalBox.style.display = "none";
+  tbody.innerHTML = "";
+  totalBox.textContent = "";
 
-  // 基本価格計算売上
-  tbody.innerHTML += `
-    <tr>
-      <td>基本価格</td>
-      <td>${data.basic.count.plain}</td>
-      <td>${data.basic.count.choco}</td>
-      <td>${data.basic.count.strawberry}</td>
-      <td>${data.basic.total} 円</td>
-    </tr>
-  `;
+  try {
+    const res = await fetch(`${API}/sales?date=${encodeURIComponent(date)}`);
+    const data = await res.json();
 
-  // 値下げ後計算売上
-  tbody.innerHTML += `
-    <tr>
-      <td>値下げ後</td>
-      <td>${data.discount.count.plain}</td>
-      <td>${data.discount.count.choco}</td>
-      <td>${data.discount.count.strawberry}</td>
-      <td>${data.discount.total} 円</td>
-    </tr>
-  `;
+    if (!res.ok || !data.ok) {
+      console.error("sales error", data);
+      alert("売上集計に失敗しました");
+      return;
+    }
 
-  totalBox.innerHTML = `合計：${data.total} 円`;
+    table.style.display = "table";
+    totalBox.style.display = "block";
+
+    // 基本価格での売上
+    tbody.innerHTML += `
+      <tr>
+        <td>基本価格</td>
+        <td>${data.basic.count.plain}</td>
+        <td>${data.basic.count.choco}</td>
+        <td>${data.basic.count.strawberry}</td>
+        <td>${data.basic.total} 円</td>
+      </tr>
+    `;
+
+    // 値下げ後の売上
+    tbody.innerHTML += `
+      <tr>
+        <td>値下げ後</td>
+        <td>${data.discount.count.plain}</td>
+        <td>${data.discount.count.choco}</td>
+        <td>${data.discount.count.strawberry}</td>
+        <td>${data.discount.total} 円</td>
+      </tr>
+    `;
+
+    totalBox.textContent = `合計：${data.total} 円`;
+  } catch (e) {
+    console.error("loadSales error", e);
+    alert("売上集計でエラーが発生しました");
+  }
 }
 
-// 初期処理
-loadBasePrice();
-loadLatestDiscount();
-
+// 初期処理：ページ読み込み時
+window.addEventListener("DOMContentLoaded", () => {
+  loadBasePrice();
+  loadDiscountRules();
+});
 </script>
 </body>
 </html>

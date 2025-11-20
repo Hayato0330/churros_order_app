@@ -11,9 +11,11 @@ export async function onRequest(context) {
   const url = new URL(request.url);
   const latest = url.searchParams.get("latest");
 
-  // GET
+  // -----------------------
+  // GET: 価格ルール取得
+  // -----------------------
   if (request.method === "GET") {
-    // latest=1 のときは「直近1件だけ」返す
+    // latest=1 のときは直近1件だけ返す（フォーム初期値用）
     if (latest === "1") {
       const row = await db
         .prepare(
@@ -21,14 +23,13 @@ export async function onRequest(context) {
         )
         .first();
 
-      // まだ値下げが1件もない場合は null を返す
       return new Response(JSON.stringify(row ?? null), {
         status: 200,
         headers,
       });
     }
 
-    // 通常は一覧を配列で返す
+    // 通常は全部返す（テーブル表示用）
     const { results } = await db
       .prepare(
         "SELECT id, start_at, plain, choco, strawberry, note FROM price_rules ORDER BY start_at ASC"
@@ -38,10 +39,14 @@ export async function onRequest(context) {
     return new Response(JSON.stringify(results), { status: 200, headers });
   }
 
-  // POST: 価格ルールを登録
+  // -----------------------
+  // POST: 価格ルール登録
+  // body: { start_at, plain, choco, strawberry, note }
+  // -----------------------
   if (request.method === "POST") {
     try {
       const body = await request.json();
+
       const toInt = (v, fallback = 0) =>
         Number.isFinite(+v) && +v >= 0 ? Math.floor(+v) : fallback;
 
