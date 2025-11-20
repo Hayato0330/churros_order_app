@@ -124,7 +124,7 @@ const API = "/api";
 
 // ▼ 現在の基本価格読み込み
 async function loadBasePrice() {
-  const res = await fetch(`${API}/baseprice`);
+  const res = await fetch(`${API}/base_price`);
   const data = await res.json();
   if (!data) return;
 
@@ -146,7 +146,7 @@ async function saveBasePrice() {
     choco: Number(document.getElementById("base-choco").value),
     strawberry: Number(document.getElementById("base-strawberry").value),
   };
-  await fetch(`${API}/baseprice`, { method:"POST", body: JSON.stringify(body) });
+  await fetch(`${API}/base_price`, { method:"POST", body: JSON.stringify(body) });
   alert("保存しました");
   loadBasePrice();
 }
