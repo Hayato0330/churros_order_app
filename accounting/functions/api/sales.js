@@ -76,15 +76,51 @@ export async function onRequest(context) {
       // ルールは start_at 昇順に並んでいる想定
       // 「値下げ価格の適用時間より前の注文 → 基本」
       // 「適用時間以降の注文 → その時点で最新の値下げ価格」
-      for (const r of parsedRules) {
-        if (ct >= r.startAt) {
-          applied = r;
-          isDiscount = true;
-        } else {
-          // これ以降のルールは未来なので見ない
-          break;
+      for (const o of orders || []) {
+        const ct = new Date(o.created_at); // 注文時間(UTC)
+
+        // --- 適用される価格ルールを検索 ---
+        let appliedRule = null;
+        for (const r of parsedRules) {
+            if (ct >= r.startAt) {
+            appliedRule = r; // 適用候補を更新（最新のものに上書き）
+            }
         }
-      }
+
+        // --- 適用価格を決定 ---
+        let applied;
+        let isDiscount;
+        if (appliedRule) {
+            applied = {
+            plain: appliedRule.plain,
+            choco: appliedRule.choco,
+            strawberry: appliedRule.strawberry
+            };
+            isDiscount = true;
+        } else {
+            applied = basePrice;
+            isDiscount = false;
+        }
+
+        // --- 金額計算 ---
+        const sub =
+            o.plain * applied.plain +
+            o.choco * applied.choco +
+            o.strawberry * applied.strawberry;
+
+        if (isDiscount) {
+            discountCount.plain += o.plain;
+            discountCount.choco += o.choco;
+            discountCount.strawberry += o.strawberry;
+            discountTotal += sub;
+        } else {
+            basicCount.plain += o.plain;
+            basicCount.choco += o.choco;
+            basicCount.strawberry += o.strawberry;
+            basicTotal += sub;
+        }
+        }
+
 
       const sub =
         o.plain * applied.plain +
