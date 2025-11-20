@@ -8,7 +8,27 @@ export async function onRequest(context) {
     "Content-Type": "application/json",
   };
 
+  const url = new URL(request.url);
+  const latest = url.searchParams.get("latest");
+
+  // GET
   if (request.method === "GET") {
+    // latest=1 のときは「直近1件だけ」返す
+    if (latest === "1") {
+      const row = await db
+        .prepare(
+          "SELECT id, start_at, plain, choco, strawberry, note FROM price_rules ORDER BY start_at DESC LIMIT 1"
+        )
+        .first();
+
+      // まだ値下げが1件もない場合は null を返す
+      return new Response(JSON.stringify(row ?? null), {
+        status: 200,
+        headers,
+      });
+    }
+
+    // 通常は一覧を配列で返す
     const { results } = await db
       .prepare(
         "SELECT id, start_at, plain, choco, strawberry, note FROM price_rules ORDER BY start_at ASC"
@@ -18,6 +38,7 @@ export async function onRequest(context) {
     return new Response(JSON.stringify(results), { status: 200, headers });
   }
 
+  // POST: 価格ルールを登録
   if (request.method === "POST") {
     try {
       const body = await request.json();

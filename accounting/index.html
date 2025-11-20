@@ -153,25 +153,60 @@ async function saveBasePrice() {
 
 // ▼ 値下げ価格保存
 async function saveDiscountPrice() {
+  const startLocal = document.getElementById("discount-date").value; // "YYYY-MM-DDTHH:mm"
+  if (!startLocal) {
+    alert("適用日時を入力してください");
+    return;
+  }
+
+  // JST として ISO に変換（Workers 内で UTC と比較しやすくする）
+  const startIso = new Date(startLocal + ":00+09:00").toISOString();
+
   const body = {
-    apply_at: document.getElementById("discount-date").value,
+    start_at: startIso,  // ← API が期待しているキー
     plain: Number(document.getElementById("discount-plain").value),
     choco: Number(document.getElementById("discount-choco").value),
     strawberry: Number(document.getElementById("discount-strawberry").value),
+    note: "",
   };
-  await fetch(`${API}/pricehistory`, { method:"POST", body: JSON.stringify(body) });
+
+  await fetch(`${API}/price_rules`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
   alert("保存しました");
 }
 
 async function loadLatestDiscount() {
-  const res = await fetch(`${API}/pricehistory?latest=1`);
-  const data = await res.json();
-  if (!data) return;
+  try {
+    const res = await fetch(`${API}/price_rules?latest=1`);
+    if (!res.ok) {
+      console.error("price_rules latest HTTP error", res.status);
+      return;
+    }
+    const data = await res.json();
+    if (!data) {
+      // 値下げルールがまだない
+      return;
+    }
 
-  document.getElementById("discount-date").value = data.apply_at.slice(0,16);
-  document.getElementById("discount-plain").value = data.plain;
-  document.getElementById("discount-choco").value = data.choco;
-  document.getElementById("discount-strawberry").value = data.strawberry;
+    // start_at(ISO) → datetime-local 用 "YYYY-MM-DDTHH:mm" に変換
+    const dt = new Date(data.start_at);
+    const yyyy = dt.getFullYear();
+    const mm = String(dt.getMonth() + 1).padStart(2, "0");
+    const dd = String(dt.getDate()).padStart(2, "0");
+    const hh = String(dt.getHours()).padStart(2, "0");
+    const mi = String(dt.getMinutes()).padStart(2, "0");
+    const localStr = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+
+    document.getElementById("discount-date").value = localStr;
+    document.getElementById("discount-plain").value = data.plain;
+    document.getElementById("discount-choco").value = data.choco;
+    document.getElementById("discount-strawberry").value = data.strawberry;
+  } catch (e) {
+    console.error("loadLatestDiscount error", e);
+  }
 }
 
 // ▼ 日別売上表示
