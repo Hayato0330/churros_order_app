@@ -1,25 +1,31 @@
 // functions/api/sales.js
-// 1日の売上を，基本価格分と値下げ後分に分けて返す
+// 1日の売上を「基本価格」と「値下げ後」に分けて返す
+// UTC / JST のズレで誤判定が起きないように、比較はすべて JST に統一
 
 export async function onRequest(context) {
   const { request, env } = context;
+  const ordersDb = env.ORDERS_DB;
+  const pricingDb = env.PRICING_DB;
 
   const headers = { "Content-Type": "application/json" };
-  const url = new URL(request.url);
-  const date = url.searchParams.get("date"); // "YYYY-MM-DD"
 
+  const url = new URL(request.url);
+  const date = url.searchParams.get("date"); // YYYY-MM-DD (JST想定)
   if (!date) {
     return new Response(
-      JSON.stringify({ ok: false, error: "date query is required (YYYY-MM-DD)" }),
+      JSON.stringify({ ok: false, error: "date (YYYY-MM-DD) is required" }),
       { status: 400, headers }
     );
   }
 
   try {
-    const ordersDb = env.ORDERS_DB;
-    const pricingDb = env.PRICING_DB;
+    // ----- JST の 1日の境界を UTC ISO に変換 -----
+    const startJst = new Date(`${date}T00:00:00+09:00`);
+    const endJst = new Date(`${date}T23:59:59.999+09:00`);
+    const startIsoUtc = startJst.toISOString();
+    const endIsoUtc = endJst.toISOString();
 
-    // --- 基本価格 ---
+    // ----- 基本価格を取得 -----
     const baseRow = await pricingDb
       .prepare("SELECT plain, choco, strawberry FROM base_prices WHERE id = 1")
       .first();
@@ -29,27 +35,22 @@ export async function onRequest(context) {
       strawberry: baseRow?.strawberry ?? 380,
     };
 
-    // --- 値下げルール一覧（start_at 昇順） ---
+    // ----- 値下げルール（start_at 昇順） -----
     const { results: rules } = await pricingDb
       .prepare(
         "SELECT start_at, plain, choco, strawberry FROM price_rules ORDER BY start_at ASC"
       )
       .all();
 
-    const parsedRules = (rules || []).map((r) => ({
-      startAt: new Date(r.start_at), // UTC
+    const parsedRules = (rules || []).map(r => ({
+      startAtUtc: new Date(r.start_at), // DBはUTCとして扱う
+      startAtJst: new Date(new Date(r.start_at).getTime() + 9 * 60 * 60 * 1000), // JST変換
       plain: r.plain,
       choco: r.choco,
       strawberry: r.strawberry,
     }));
 
-    // --- 指定日の注文一覧 ---
-    // created_at は UTC ISO を前提．日付は「日本時間の日付」で集計したいので +09:00 で境界を作る．
-    const startJst = new Date(date + "T00:00:00+09:00");
-    const endJst = new Date(date + "T23:59:59.999+09:00");
-    const startIsoUtc = startJst.toISOString();
-    const endIsoUtc = endJst.toISOString();
-
+    // ----- 指定日の注文一覧 -----
     const { results: orders } = await ordersDb
       .prepare(
         `SELECT id, created_at, plain, choco, strawberry
@@ -59,86 +60,54 @@ export async function onRequest(context) {
       .bind(startIsoUtc, endIsoUtc)
       .all();
 
-    // --- 集計用の変数 ---
+    // ----- 集計用変数 -----
     const basicCount = { plain: 0, choco: 0, strawberry: 0 };
     const discountCount = { plain: 0, choco: 0, strawberry: 0 };
     let basicTotal = 0;
     let discountTotal = 0;
 
+    // ----- 注文ごとに、適用する価格帯を判定 -----
     for (const o of orders || []) {
-      const ct = new Date(o.created_at); // UTC
+      const utcOrder = new Date(o.created_at);
+      const jstOrder = new Date(utcOrder.getTime() + 9 * 60 * 60 * 1000);
 
-      // 適用される価格を決める
       // デフォルトは基本価格
       let applied = basePrice;
       let isDiscount = false;
+      let latestRule = null;
 
-      // ルールは start_at 昇順に並んでいる想定
-      // 「値下げ価格の適用時間より前の注文 → 基本」
-      // 「適用時間以降の注文 → その時点で最新の値下げ価格」
-      for (const o of orders || []) {
-        const ct = new Date(o.created_at); // 注文時間(UTC)
-
-        // --- 適用される価格ルールを検索 ---
-        let appliedRule = null;
-        for (const r of parsedRules) {
-            if (ct >= r.startAt) {
-            appliedRule = r; // 適用候補を更新（最新のものに上書き）
-            }
+      // 「値下げ開始 <= 注文」のうち、最も遅いルールだけ使う
+      for (const r of parsedRules) {
+        if (jstOrder >= r.startAtJst) {
+          latestRule = r; // 候補を更新
         }
+      }
 
-        // --- 適用価格を決定 ---
-        let applied;
-        let isDiscount;
-        if (appliedRule) {
-            applied = {
-            plain: appliedRule.plain,
-            choco: appliedRule.choco,
-            strawberry: appliedRule.strawberry
-            };
-            isDiscount = true;
-        } else {
-            applied = basePrice;
-            isDiscount = false;
-        }
+      if (latestRule) {
+        applied = {
+          plain: latestRule.plain,
+          choco: latestRule.choco,
+          strawberry: latestRule.strawberry,
+        };
+        isDiscount = true;
+      }
 
-        // --- 金額計算 ---
-        const sub =
-            o.plain * applied.plain +
-            o.choco * applied.choco +
-            o.strawberry * applied.strawberry;
-
-        if (isDiscount) {
-            discountCount.plain += o.plain;
-            discountCount.choco += o.choco;
-            discountCount.strawberry += o.strawberry;
-            discountTotal += sub;
-        } else {
-            basicCount.plain += o.plain;
-            basicCount.choco += o.choco;
-            basicCount.strawberry += o.strawberry;
-            basicTotal += sub;
-        }
-        }
-
-
-      const sub =
+      // 合計金額
+      const subtotal =
         o.plain * applied.plain +
         o.choco * applied.choco +
         o.strawberry * applied.strawberry;
 
       if (isDiscount) {
-        // 値下げ後エリア
         discountCount.plain += o.plain;
         discountCount.choco += o.choco;
         discountCount.strawberry += o.strawberry;
-        discountTotal += sub;
+        discountTotal += subtotal;
       } else {
-        // 値下げ前（基本価格）エリア
         basicCount.plain += o.plain;
         basicCount.choco += o.choco;
         basicCount.strawberry += o.strawberry;
-        basicTotal += sub;
+        basicTotal += subtotal;
       }
     }
 
