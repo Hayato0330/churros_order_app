@@ -19,7 +19,7 @@
     font-size: clamp(1.6rem, 6vw, 2.4rem);
     font-weight: 800;
     letter-spacing: .05em;
-    padding-top: .6em; /* タイトルを半文字分下げる */
+    padding-top: .6em;
   }
 
   .flavor { margin: 1.2rem 0; }
@@ -243,7 +243,8 @@
     confirmBtn.textContent = '確定';
     confirmBtn.dataset.mode = 'confirm';
 
-    cancelBtn.style.display = "inline-flex";
+    // ★ 戻るボタンを再表示（display を CSS に戻す）
+    cancelBtn.style.display = "";
 
     modal.style.display = 'flex';
   }
@@ -255,7 +256,7 @@
   document.getElementById('open-confirm').addEventListener('click', openModal);
   cancelBtn.addEventListener('click', closeModal);
 
-  /* 注文送信 → 完了ポップアップに切り替え */
+  /* 注文送信 → 完了ポップアップに切り替え（戻る非表示） */
   async function postOrder() {
     const { plain, choco, straw } = getCounts();
 
@@ -282,18 +283,21 @@
         document.querySelectorAll('.count').forEach(c => (c.textContent = '0'));
         document.querySelectorAll('.dec').forEach(b => (b.disabled = true));
 
+        // ★ 戻るボタンを隠し、「閉じる」だけにする
         cancelBtn.style.display = "none";
         confirmBtn.textContent = '閉じる';
         confirmBtn.dataset.mode = 'close';
       } else {
         titleEl.textContent = 'エラー';
         msgEl.textContent = '送信に失敗しました。もう一度お試しください。';
+        cancelBtn.style.display = "none";
         confirmBtn.textContent = '閉じる';
         confirmBtn.dataset.mode = 'close';
       }
     } catch (e) {
       titleEl.textContent = '通信エラー';
       msgEl.textContent = 'ネットワークエラーが発生しました。';
+      cancelBtn.style.display = "none";
       confirmBtn.textContent = '閉じる';
       confirmBtn.dataset.mode = 'close';
     }
@@ -301,7 +305,7 @@
 
   /* 確定／閉じるボタンの挙動 */
   confirmBtn.addEventListener('click', () => {
-    const mode = confirmBtn.dataset.mode || 'confirm';  // ★ ここが重要
+    const mode = confirmBtn.dataset.mode || 'confirm';
 
     if (mode === 'confirm') {
       // 確認状態 → 注文を送信して完了画面へ
