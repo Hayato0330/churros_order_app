@@ -1,6 +1,8 @@
 // functions/api/sales.js
 // 1日の売上を「基本価格」と「値下げ後」に分けて返す
-// UTC / JST のズレで誤判定が起きないように、比較はすべて JST に統一
+// ・日付指定は JST の YYYY-MM-DD を想定
+// ・DB に保存されている時刻は UTC ISO として扱う
+// ・集計対象の日の「その日中に start_at がある値下げルール」だけを使う
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -10,7 +12,8 @@ export async function onRequest(context) {
   const headers = { "Content-Type": "application/json" };
 
   const url = new URL(request.url);
-  const date = url.searchParams.get("date"); // YYYY-MM-DD (JST想定)
+  const date = url.searchParams.get("date"); // "YYYY-MM-DD"
+
   if (!date) {
     return new Response(
       JSON.stringify({ ok: false, error: "date (YYYY-MM-DD) is required" }),
@@ -19,72 +22,88 @@ export async function onRequest(context) {
   }
 
   try {
-    // ----- JST の 1日の境界を UTC ISO に変換 -----
-    const startJst = new Date(`${date}T00:00:00+09:00`);
-    const endJst = new Date(`${date}T23:59:59.999+09:00`);
-    const startIsoUtc = startJst.toISOString();
-    const endIsoUtc = endJst.toISOString();
+    // ---- 1. 集計対象日の JST 境界 → UTC ISO に変換 ----
+    const dayStartJst = new Date(`${date}T00:00:00+09:00`);
+    const dayEndJst   = new Date(`${date}T23:59:59.999+09:00`);
+    const dayStartUtcIso = dayStartJst.toISOString();
+    const dayEndUtcIso   = dayEndJst.toISOString();
 
-    // ----- 基本価格を取得 -----
+    // ---- 2. 基本価格を取得 ----
     const baseRow = await pricingDb
       .prepare("SELECT plain, choco, strawberry FROM base_prices WHERE id = 1")
       .first();
+
     const basePrice = {
       plain: baseRow?.plain ?? 300,
       choco: baseRow?.choco ?? 350,
       strawberry: baseRow?.strawberry ?? 380,
     };
 
-    // ----- 値下げルール（start_at 昇順） -----
-    const { results: rules } = await pricingDb
+    // ---- 3. 値下げルール一覧（全期間）を取得 ----
+    const { results: rulesAll } = await pricingDb
       .prepare(
         "SELECT start_at, plain, choco, strawberry FROM price_rules ORDER BY start_at ASC"
       )
       .all();
 
-    const parsedRules = (rules || []).map(r => ({
-      startAtUtc: new Date(r.start_at), // DBはUTCとして扱う
-      startAtJst: new Date(new Date(r.start_at).getTime() + 9 * 60 * 60 * 1000), // JST変換
-      plain: r.plain,
-      choco: r.choco,
-      strawberry: r.strawberry,
-    }));
+    // DB の start_at は UTC ISO を想定
+    // → いったん JST に変換して、その「日付」が集計対象日に一致するものだけを使う
+    const rulesForDay = (rulesAll || [])
+      .map(r => {
+        const startUtc = new Date(r.start_at);
+        const startJst = new Date(startUtc.getTime() + 9 * 60 * 60 * 1000); // +9h
+        return {
+          startAtUtc: startUtc,
+          startAtJst: startJst,
+          plain: r.plain,
+          choco: r.choco,
+          strawberry: r.strawberry,
+        };
+      })
+      .filter(r => {
+        // startAtJst が「その日」の 00:00〜23:59:59.999 の範囲にあるものだけ
+        return r.startAtJst >= dayStartJst && r.startAtJst <= dayEndJst;
+      })
+      .sort((a, b) => a.startAtJst - b.startAtJst); // 念のため昇順ソート
 
-    // ----- 指定日の注文一覧 -----
+    // ---- 4. 指定日の注文一覧を取得（orders.created_at は UTC ISO 想定） ----
     const { results: orders } = await ordersDb
       .prepare(
         `SELECT id, created_at, plain, choco, strawberry
          FROM orders
          WHERE created_at >= ? AND created_at <= ?`
       )
-      .bind(startIsoUtc, endIsoUtc)
+      .bind(dayStartUtcIso, dayEndUtcIso)
       .all();
 
-    // ----- 集計用変数 -----
+    // ---- 5. 集計用変数 ----
     const basicCount = { plain: 0, choco: 0, strawberry: 0 };
     const discountCount = { plain: 0, choco: 0, strawberry: 0 };
     let basicTotal = 0;
     let discountTotal = 0;
 
-    // ----- 注文ごとに、適用する価格帯を判定 -----
+    // ---- 6. 注文ごとに「その日の値下げルール」の中から適用ルールを決定 ----
     for (const o of orders || []) {
-      const utcOrder = new Date(o.created_at);
-      const jstOrder = new Date(utcOrder.getTime() + 9 * 60 * 60 * 1000);
+      const orderUtc = new Date(o.created_at);
+      const orderJst = new Date(orderUtc.getTime() + 9 * 60 * 60 * 1000); // JST に変換
 
-      // デフォルトは基本価格
-      let applied = basePrice;
+      // デフォルトは基本価格（値下げなし）
+      let appliedPrice = basePrice;
       let isDiscount = false;
-      let latestRule = null;
 
-      // 「値下げ開始 <= 注文」のうち、最も遅いルールだけ使う
-      for (const r of parsedRules) {
-        if (jstOrder >= r.startAtJst) {
-          latestRule = r; // 候補を更新
+      // その日のルールの中で「開始時刻 <= 注文時刻」のうち一番遅いものを探す
+      let latestRule = null;
+      for (const r of rulesForDay) {
+        if (orderJst >= r.startAtJst) {
+          latestRule = r;
+        } else {
+          // 昇順なので、これ以降は全部未来のルール
+          break;
         }
       }
 
       if (latestRule) {
-        applied = {
+        appliedPrice = {
           plain: latestRule.plain,
           choco: latestRule.choco,
           strawberry: latestRule.strawberry,
@@ -92,11 +111,10 @@ export async function onRequest(context) {
         isDiscount = true;
       }
 
-      // 合計金額
       const subtotal =
-        o.plain * applied.plain +
-        o.choco * applied.choco +
-        o.strawberry * applied.strawberry;
+        o.plain * appliedPrice.plain +
+        o.choco * appliedPrice.choco +
+        o.strawberry * appliedPrice.strawberry;
 
       if (isDiscount) {
         discountCount.plain += o.plain;
